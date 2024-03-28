@@ -1,0 +1,60 @@
+﻿<Window x:Class="AI_Training_API.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AI_Training_API"
+        mc:Ignorable="d"
+        Loaded="Window_Loaded"
+        Title="MainWindow" Height="450" Width="800" Background="#0F0F0F">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="boolVis" />
+        <local:BoolToHeightConverter x:Key="boolToMaxHeightConverter" />
+
+        <DataTemplate x:Key="DefaultMessageTemplate" DataType="local:MessageViewModel">
+            <Border Style="{StaticResource MessageContainerBorder}">
+                <TextBox Text="{Binding Message, Mode=OneWay}" Style="{StaticResource MessageTextStyle}" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FunctionResultMessageTemplate" DataType="local:MessageViewModel">
+            <Border Style="{StaticResource MessageContainerBorder}">
+                <Grid>
+                    <TextBox Text="{Binding Message, Mode=OneWay}" Style="{StaticResource MessageTextStyle}"
+                        MaxHeight="{Binding IsExpanded, Converter={StaticResource boolToMaxHeightConverter}, FallbackValue=54}" />
+                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}" VerticalAlignment="Top" HorizontalAlignment="Right" />
+
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <local:MessageTypeTemplateSelector x:Key="MessageTypeTemplateSelector"
+            DefaultMessageTemplate="{StaticResource DefaultMessageTemplate}"
+            FunctionResultMessageTemplate="{StaticResource FunctionResultMessageTemplate}" />
+        
+    </Window.Resources>
+    <Grid Margin="5" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Row="0" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" x:Name="scrollViewer">
+            <ItemsControl ItemsSource="{Binding Messages}" ItemTemplateSelector="{StaticResource MessageTypeTemplateSelector}"/>
+        </ScrollViewer>
+        <TextBox Grid.Row="1"
+                 Style="{StaticResource InputTextStyle}"
+                 Text="{Binding Input, FallbackValue='Input goes here', UpdateSourceTrigger=PropertyChanged}"
+                 x:Name="inputField"
+                 IsEnabled="{Binding IsReady}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding SendCommand}" />
+                <KeyBinding Key="Up" Command="{Binding PreviousCommand}" />
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button FontSize="22" Content="Send" Grid.Row="1" Grid.Column="1" Command="{Binding SendCommand}" IsEnabled="{Binding IsReady}"/>
+    </Grid>
+</Window>
