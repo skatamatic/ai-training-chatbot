@@ -37,15 +37,22 @@ public class MainWindowViewModel : ObservableObject
 
         functionObserver.OnFunctionInvocation += OnFunctionInvocation;
         functionObserver.OnFunctionResult += OnFunctionResult;
+        functionObserver.OnFunctionProgressUpdate += OnFunctionProgress;
+    }
+
+    private void OnFunctionProgress(object sender, string e)
+    {
+        UpdateStatus(e);
     }
 
     private void OnFunctionResult(object sender, string e)
     {
         string sessionId = _api.ActiveSessionId;
-
+        
         Dispatcher.CurrentDispatcher.Invoke(() =>
         {
             AddFunctionInfo($"Function Result:{e}\n\nSession: {sessionId}", isResult: true);
+            Status.Message = "Processing";
         });
     }
 
@@ -67,6 +74,11 @@ public class MainWindowViewModel : ObservableObject
             Messages.Remove(Status);
             Messages.Add(Status);
         }
+    }
+
+    private void UpdateStatus(string message)
+    {
+        Status.Message = message;
     }
 
     private async Task Send()

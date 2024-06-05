@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CSharpTools\CSharpTools.csproj" />
     <ProjectReference Include="..\OpenAIAPI_BasicRest\OpenAIAPI_BasicRest.csproj" />
     <ProjectReference Include="..\OpenAIAPI_Rystem\OpenAIAPI_Rystem.csproj" />
   </ItemGroup>

@@ -7,6 +7,8 @@ public class OpenAIConfig
     public string Mode { get; set; } = "completions";
     public int MaxTokens { get; set; } = 100;
     public bool EnableFunctions { get; set; } = false;
+    public bool TransmitFunctionResults { get; set; } = false;
+    public string SystemPrompt { get; set; }
 
     public OpenAIConfig(string apiKey)
     {
@@ -23,6 +25,7 @@ public class OpenAIConfig
             ModelType.GPT4_ImagePreview => "gpt-4-vision-preview",
             ModelType.GPT4_Turbo => "gpt-4-turbo-preview",
             ModelType.GPT3_5_Turbo => "gpt-3.5-turbo",
+            ModelType.GPT4o => "gpt-4o",
             _ => throw new ArgumentOutOfRangeException(nameof(Model), "Unsupported model type")
         };
     }

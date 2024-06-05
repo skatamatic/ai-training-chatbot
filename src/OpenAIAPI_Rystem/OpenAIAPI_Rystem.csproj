@@ -9,10 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Cake.Powershell" Version="3.0.0" />
     <PackageReference Include="InfluxData.Net" Version="8.0.1" />
+    <PackageReference Include="MySql.Data" Version="8.4.0" />
     <PackageReference Include="Rystem.OpenAi" Version="3.3.11" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CSharpTools\CSharpTools.csproj" />
     <ProjectReference Include="..\OpenAIAPI_BasicRest\OpenAIAPI_BasicRest.csproj" />
   </ItemGroup>
 

@@ -15,6 +15,7 @@ public class OpenAIFunctionChainerAPI : IOpenAIAPI
     private Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
 
     public string ActiveSessionId { get; private set; }
+    public string SystemPrompt { get; set; }
 
     public OpenAIFunctionChainerAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions)
     {
@@ -55,9 +56,19 @@ public class OpenAIFunctionChainerAPI : IOpenAIAPI
             .WithModel(_config.GetModelString())
             .SetMaxTokens(_config.MaxTokens);
 
-        if (_config.EnableFunctions)
+        if (_config.EnableFunctions && _chatFunctions.Count > 0)
         {
             request = request.WithAllFunctions();
+        }
+
+        if (!string.IsNullOrEmpty(_config.SystemPrompt))
+        {
+            request.AddSystemMessage(_config.SystemPrompt);
+        }
+
+        if (!string.IsNullOrEmpty(SystemPrompt))
+        {
+            request.AddSystemMessage(SystemPrompt);
         }
 
         var result = await request.ExecuteAsync(false);
@@ -68,7 +79,12 @@ public class OpenAIFunctionChainerAPI : IOpenAIAPI
             IOpenAiChatFunction function = _chatFunctions[chatFunction.Name];
 
             string functionResult = JsonConvert.SerializeObject(await function.WrapAsync(chatFunction.Arguments));
-            
+
+            //These can be extremely large (like if a file was read)
+            //Because of this, it is probably best to usually not store actual function call results in session history
+            if (_config.TransmitFunctionResults)
+                session.AddFunctionResult(function.Name, functionResult);
+
             request.AddFunctionMessage(function.Name, functionResult)
                 .WithNumberOfChoicesPerPrompt(1);
 

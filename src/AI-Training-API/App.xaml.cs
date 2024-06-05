@@ -41,10 +41,7 @@ public partial class App : Application
         var openAIConfig = configuration.GetSection("OpenAIConfig").Get<OpenAIConfig>();
 
         services.AddSingleton(openAIConfig);
-        //services.AddSingleton<IOpenAIAPI, RestOpenAIAPI>();
-        //services.AddSingleton<IOpenAIAPI, OpenAIRSystemAPI>();
 
-        //This is the most robust API implementation.  It includes a bug fix for multiple functions and handles FunctionChain functions
         services.AddSingleton<IOpenAIAPI, OpenAIFunctionChainerAPI>();
 
         services.AddOpenAi(settings =>
@@ -58,16 +55,27 @@ public partial class App : Application
         services.AddSingleton<IWeatherService, WeatherService>();
         services.AddOpenAiChatFunction<WeatherAPIFunction>();
 
-        //services.AddSingleton<ISystemService, SystemService>();
-        //services.AddOpenAiChatFunction<EnumerateFileSystemFunction>();
-        //services.AddOpenAiChatFunction<GetFileContentsSystemFunction>();
-        //services.AddOpenAiChatFunction<FunctionChainFunction>();
-        //services.AddOpenAiChatFunction<WriteFileContentsSystemFunction>();
-        //services.AddOpenAiChatFunction<ExecutePowerShellScriptSystemFunction>();
+        /*services.AddSingleton<IMySqlService, MySqlService>();
+        services.AddOpenAiChatFunction<MySqlQueryAPIFunction>();
+        services.AddOpenAiChatFunction<MySqlNonQueryAPIFunction>();
 
         services.AddSingleton<IInfluxService, InfluxService>();
         services.AddOpenAiChatFunction<InfluxQueryAPIFunction>();
         services.AddOpenAiChatFunction<InfluxWriteAPIFunction>();
+
+        services.AddOpenAiChatFunction<FunctionChainFunction>();
+
+        services.AddSingleton<ISystemService, SystemService>();
+        services.AddOpenAiChatFunction<EnumerateFileSystemFunction>();
+        services.AddOpenAiChatFunction<GetFileContentsSystemFunction>();
+        services.AddOpenAiChatFunction<WriteFileContentsSystemFunction>();
+        services.AddOpenAiChatFunction<ExecutePowerShellScriptSystemFunction>();
+
+        services.AddSingleton<ICSharpService, CSharpService>();
+        services.AddOpenAiChatFunction<CSharpDefinitionsFunction>();
+
+        services.AddSingleton<ITestRunnerService, UnityTestRunnerService>();
+        services.AddOpenAiChatFunction<TestRunnerFunction>();*/
 
         services.AddSingleton<FunctionInvocationObserver>();
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());

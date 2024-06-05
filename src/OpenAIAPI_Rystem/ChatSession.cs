@@ -28,12 +28,13 @@ public class ChatSession
         _messages.Add(message);
     }
 
-    public void AddFunctionResult(string result)
+    public void AddFunctionResult(string name, string result)
     {
         var message = new ChatMessage()
         {
             Content = result,
-            Role = ChatRole.Function
+            Role = ChatRole.Function,
+            Name = name
         };
 
         _messages.Add(message);

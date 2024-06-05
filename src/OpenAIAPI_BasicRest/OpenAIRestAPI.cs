@@ -14,6 +14,8 @@ public class RestOpenAIAPI : IOpenAIAPI
 
     public string ActiveSessionId => "???";
 
+    public string SystemPrompt { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
     public RestOpenAIAPI(OpenAIConfig config)
     {
         _config = config;
