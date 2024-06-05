@@ -1,4 +1,4 @@
-﻿namespace ServiceInterface;
+﻿namespace Shared;
 
 public class OpenAIConfig
 {

@@ -9,15 +9,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenAIAPI_BasicRest", "Open
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenAIAPI_Rystem", "OpenAIAPI_Rystem\OpenAIAPI_Rystem.csproj", "{91A926B6-BE01-4CE1-991A-72E54DA95F08}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceInterface", "ServiceInterface\ServiceInterface.csproj", "{D431187E-F1E6-4547-A596-9F9D688C75A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shared", "ServiceInterface\Shared.csproj", "{D431187E-F1E6-4547-A596-9F9D688C75A0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSharpTools", "CSharpTools\CSharpTools.csproj", "{A8D3FCDA-C33D-430D-B4A6-88FB8F5F889F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSharpToolsCLI", "CSharpToolsCLI\CSharpToolsCLI.csproj", "{F0D8D11F-E164-4F12-B10D-8B8B6330A03B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityUnitTestGenerator", "UnityUnitTestGenerator\UnityUnitTestGenerator.csproj", "{CEAB99B6-7D4A-4860-9EDC-6FCA98DAB113}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnityUnitTestGenerator", "UnityUnitTestGenerator\UnityUnitTestGenerator.csproj", "{CEAB99B6-7D4A-4860-9EDC-6FCA98DAB113}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestGeneratorCLI", "UnitTestGeneratorCLI\UnitTestGeneratorCLI.csproj", "{651B9B77-2D8E-45C7-8151-D6C1B6127565}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTestGeneratorCLI", "UnitTestGeneratorCLI\UnitTestGeneratorCLI.csproj", "{651B9B77-2D8E-45C7-8151-D6C1B6127565}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

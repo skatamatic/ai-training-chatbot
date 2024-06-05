@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
-using ServiceInterface;
-using System.Net;
+using Shared;
 using System.Text;
 
 namespace OpenAIAPI_BasicRest;

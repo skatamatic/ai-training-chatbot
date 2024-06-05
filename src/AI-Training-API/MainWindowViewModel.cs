@@ -1,6 +1,6 @@
 ﻿using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
-using ServiceInterface;
+using Shared;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading;

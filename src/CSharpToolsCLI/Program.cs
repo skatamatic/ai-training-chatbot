@@ -1,7 +1,7 @@
 ﻿using CSharpTools;
 using Microsoft.CodeAnalysis;
 
-const string FILENAME = "D:\\Repos\\worklink-app\\Assets\\Scripts\\ARTracking\\ARTrackingPlatformServices\\MultiPoseGizmoController.cs";
+const string FILENAME = "D:\\Repos\\worklink-app\\Assets\\Scripts\\ARTracking\\ARTrackingPlatformServices\\MultiPoseTracking.cs";
 const int MAX_DEPTH = 3;
 
 var startCol = Console.ForegroundColor;

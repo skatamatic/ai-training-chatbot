@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAIAPI_Rystem;
-using ServiceInterface;
+using Shared;
 using UnityUnitTestGenerator;
 
 namespace UnitTestGeneratorCLI;
@@ -43,7 +43,7 @@ class Program
 
         services.AddSingleton(openAIConfig);
 
-        services.AddSingleton<IOpenAIAPI, OpenAIFunctionChainerAPI>();
+        services.AddSingleton<IOpenAIAPI, RystemFunctionAPI>();
 
         services.AddOpenAi(settings =>
         {

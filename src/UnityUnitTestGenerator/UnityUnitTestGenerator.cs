@@ -1,4 +1,4 @@
-﻿using ServiceInterface;
+﻿using Shared;
 using CSharpTools;
 using System.Text;
 using Newtonsoft.Json;
@@ -67,9 +67,12 @@ public class UnitTestGenerator : IUnitTestGenerator
         var json = ExtractJson(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestDto>(json);
 
+        string writePath = Path.Combine(_config.OutputDirectory, testDto.TestFileName);
         _output($"Got response from OpenAI:\n{response}");
 
-        File.WriteAllText(Path.Combine(_config.OutputDirectory, testDto.TestFileName), testDto.TestFileContent);
+        File.WriteAllText(writePath, testDto.TestFileContent);
+
+        _output($"\n\nWrote to disk: '{writePath}'  All done!");
     }
 
     private string BuildUserPrompt(string uutContent, string context)
@@ -96,24 +99,24 @@ Here's all the context:
 You are a Unity unit test generation bot.  
 You are to take this csharp code as well as all the accompanying context and generate excellent quality and VERY COMPREHENSIVE unit tests for it.  Write as many tests as you can covering functionality and edge cases (but keep in mind your token limit of 4000 output tokens).
 
-Answer with the following json format.  Be mindful to escape it properly:
-{{{{
-   """"test_file_name"""": """"<name of the test file>"""",
-   """"test_file_content"""": """"<content of the test file>"""",
-   """"notes"""": """"<any notes you want to include>""""
-}}}}""
-
 NEVER any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
 NEVER USE REFLECTION or any clever tricks in your tests.
 Sometimes context is supplemented with mocks we use.  Be sure to use them if present!  eg MockTickProvider instead of using NSubstitute for ITickProvider.  It is available in the context!  Do NOT use nsubstitute ITickProvider, and do not try to call Tick() methods in the unit under test directly (they are never public).  You must use the mock, it will fire the tick handler.
 Use nunit, nsubstitute, Assert.That, and Assert/Act/Arrange with comments indicating Assert/Act/Arrange poritons.  You can do Act/Assert/Act/Assert after if it makes sense to, but only do 1 arrange.
 Often it will be hard to test methods directly, you will need to mock raising events to execute the code.  Make sure to do this and not use reflection.
-Ensure you are using best practices and excellent code quality.  
+Ensure you are using best practices and excellent code quality.  Aim for at least 9 tests for large classes if possible
 Name tests like Action_WhenCondition_ExpectResult.
 Use comments as appropriate.
 Use [TestCases] and [Values] as appropriate to cover multiple inputs.  Favor this over multiple tests.
 Do NOT try to substitute any concrete classes.  That does not work.  You will need to create real ones (eg Unity things like Transforms and Cameras).  Be sure to clean these up!
 Do not ask for any permissions or responses or use any non json output.
+
+Answer with the following json format.  Be mindful to escape it properly:
+{{{{
+   ""test_file_name"": ""<name of the test file>"",
+   ""test_file_content"": ""<content of the test file>"",
+   ""notes"": ""<any notes you want to include>""
+}}}}""
 
 {supplementalSystemPrompt}";
 

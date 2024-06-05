@@ -1,4 +1,4 @@
-﻿using ServiceInterface;
+﻿using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 

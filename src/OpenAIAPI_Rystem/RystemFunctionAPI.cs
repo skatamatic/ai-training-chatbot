@@ -2,11 +2,11 @@
 using OpenAIAPI_Rystem.Functions;
 using Rystem.OpenAi;
 using Rystem.OpenAi.Chat;
-using ServiceInterface;
+using Shared;
 
 namespace OpenAIAPI_Rystem;
 
-public class OpenAIFunctionChainerAPI : IOpenAIAPI
+public class RystemFunctionAPI : IOpenAIAPI
 {
     private readonly IOpenAi _api;
     private readonly OpenAIConfig _config;
@@ -17,7 +17,7 @@ public class OpenAIFunctionChainerAPI : IOpenAIAPI
     public string ActiveSessionId { get; private set; }
     public string SystemPrompt { get; set; }
 
-    public OpenAIFunctionChainerAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions)
+    public RystemFunctionAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions)
     {
         _config = config;
         _api = factory.Create();

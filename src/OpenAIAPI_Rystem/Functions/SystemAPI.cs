@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using ServiceInterface;
+using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
@@ -89,7 +89,7 @@ public class ExecutePowerShellScriptSystemFunction : FunctionBase
     public const string FUNCTION_NAME = "execute_powershell_script";
 
     public override string Name => FUNCTION_NAME;
-    public override string Description => "Executes a PowerShell script (optionally in this process or in a separate console) and returns the output or an error.  ALWAYS pipe output to the Information stream via '| Write-Information'.  Prefer setting RunInSeparateConsole to false unless asked not to.";
+    public override string Description => "Executes a PowerShell script and returns the output or an error.  ALWAYS pipe output (like Writes) to the Information stream via '| Write-Information'";
     public override Type Input => typeof(PowerShellScriptRequest);
 
     private readonly ISystemService _fileSystemService;
@@ -104,6 +104,7 @@ public class ExecutePowerShellScriptSystemFunction : FunctionBase
     {
         if (request is PowerShellScriptRequest scriptRequest)
         {
+            scriptRequest.RunInSeparateConsole = false;
             return await _fileSystemService.ExecutePowerShellScriptAsync(scriptRequest);
         }
 

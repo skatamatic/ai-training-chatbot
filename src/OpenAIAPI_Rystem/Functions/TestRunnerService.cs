@@ -1,7 +1,6 @@
-﻿using CSharpTools;
+﻿using CSharpTools.TestRunner;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Rystem.OpenAi;
 
 namespace OpenAIAPI_Rystem.Functions;
 

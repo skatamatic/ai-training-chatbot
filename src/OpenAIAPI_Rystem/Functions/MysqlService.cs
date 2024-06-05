@@ -5,6 +5,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
+namespace OpenAIAPI_Rystem.Functions;
+
 public interface IMySqlService
 {
     Task<MySqlResponse> Query(MySqlQueryRequest request);

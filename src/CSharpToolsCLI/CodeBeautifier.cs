@@ -5,10 +5,6 @@ public class SyntaxHighlighter
 {
     private static readonly (string Pattern, string Color)[] Patterns = new[]
     {
-        // Comments
-        (@"//.*", "darkgreen"),
-        // Strings
-        (@"""([^""\\]|\\.)*""", "darkorange3"),
         // Attributes
         (@"(\[\[.*?\]\])", "springgreen4"),
         // Interfaces
@@ -30,7 +26,7 @@ public class SyntaxHighlighter
     public static void HighlightAndPrint(string code)
     {
         var lines = code.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-        foreach (var line in lines.Select(x=>EscapeMarkup(x)))
+        foreach (var line in lines.Select(x => EscapeMarkup(x)))
         {
             var highlightedLine = HighlightLine(line);
             try
@@ -46,26 +42,46 @@ public class SyntaxHighlighter
 
     private static string HighlightLine(string line)
     {
-        //Comment only lines ignore other formatting
-        if (line.Trim().StartsWith("//"))
+        // Split line into code, string, and comment parts
+        var parts = Regex.Split(line, @"(""([^""\\]|\\.)*"")|(//.*)");
+
+        for (int i = 0; i < parts.Length; i++)
         {
-            return HighlightComments(line);
+            if (parts[i].StartsWith("\"") && parts[i].EndsWith("\""))
+            {
+                // Highlight string parts
+                parts[i] = HighlightStrings(parts[i]);
+                parts[i + 1] = ""; //Weird hack, above regex splits an extra character after strings.  No time to fix it :(
+                // Highlight comment parts
+                parts[i] = HighlightComments(parts[i]);
+            }
+            else if (parts[i].StartsWith("//"))
+            {
+                // Highlight comment parts
+                parts[i] = HighlightComments(parts[i]);
+            }
+            else
+            {
+                // Highlight code parts
+                foreach (var (pattern, color) in Patterns)
+                {
+                    parts[i] = Regex.Replace(parts[i], pattern, $"[{color}]$0[/]", RegexOptions.Compiled);
+                }
+            }
         }
 
-        // First, highlight comments to ensure other patterns do not affect them
-        line = HighlightComments(line);
-
-        // Then, apply all other patterns
-        foreach (var (pattern, color) in Patterns)
-        {
-            line = Regex.Replace(line, pattern, $"[{color}]$0[/]", RegexOptions.Compiled);
-        }
-        return line;
+        // Combine all parts
+        return string.Concat(parts);
     }
 
     private static string HighlightComments(string line)
     {
         return Regex.Replace(line, @"//.*", "[grey]$0[/]", RegexOptions.Compiled);
+    }
+
+    private static string HighlightStrings(string line)
+    {
+        return Regex.Replace(line, @"""([^""\\]|\\.)*""", "[lightsalmon3_1]$0[/]", RegexOptions.Compiled);
     }
 
     private static string EscapeMarkup(string text)
