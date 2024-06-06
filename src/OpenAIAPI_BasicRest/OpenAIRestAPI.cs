@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
-using ServiceInterface;
-using System.Net;
+using Shared;
 using System.Text;
 
 namespace OpenAIAPI_BasicRest;
@@ -13,6 +12,8 @@ public class RestOpenAIAPI : IOpenAIAPI
     private readonly OpenAIConfig _config;
 
     public string ActiveSessionId => "???";
+
+    public string SystemPrompt { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public RestOpenAIAPI(OpenAIConfig config)
     {

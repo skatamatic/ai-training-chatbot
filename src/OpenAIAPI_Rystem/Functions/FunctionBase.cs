@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Rystem.OpenAi.Chat;
-using ServiceInterface;
+using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 

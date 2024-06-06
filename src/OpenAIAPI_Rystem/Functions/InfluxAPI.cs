@@ -1,5 +1,5 @@
 ﻿using InfluxData.Net.InfluxDb.Models;
-using ServiceInterface;
+using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
