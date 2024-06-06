@@ -19,7 +19,7 @@
                         <Setter Property="Background" Value="Transparent" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsMarkdownRendering}" Value="True">
-                                <Setter Property="Background" Value="White" />
+                                <Setter Property="Background" Value="Transparent" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -37,19 +37,22 @@
                             </Style>
                         </TextBox.Style>
                     </TextBox>
-                    <mdxam:MarkdownScrollViewer Markdown="{Binding MarkdownMessage, Mode=OneWay}" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="MarkdownScrollViewer_PreviewMouseWheel">
-                        <mdxam:MarkdownScrollViewer.Style>
-                            <Style TargetType="mdxam:MarkdownScrollViewer">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsMarkdownRendering}" Value="True" >
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </mdxam:MarkdownScrollViewer.Style>
-                    </mdxam:MarkdownScrollViewer>
-                    <CheckBox HorizontalAlignment="Right" VerticalAlignment="Top" Content="Render Markdown" IsChecked="{Binding IsMarkdownRendering, Mode=TwoWay}" Foreground="Gray" Visibility="{Binding ShowMarkdownToggle, Converter={StaticResource boolVis}}" />
+                    <Grid Margin="0 15 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="6*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="1" Background="#FEFEFE" CornerRadius="8" Visibility="{Binding IsMarkdownRendering, Converter={StaticResource boolVis}}">
+                            <mdxam:MarkdownScrollViewer Markdown="{Binding MarkdownMessage, Mode=OneWay}" MarkdownStyleName="Standard" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="MarkdownScrollViewer_PreviewMouseWheel" Margin="10">
+                                <mdxam:MarkdownScrollViewer.MarkdownStyle>
+                                    <Style TargetType="FlowDocument">
+                                    </Style>
+                                </mdxam:MarkdownScrollViewer.MarkdownStyle>
+                            </mdxam:MarkdownScrollViewer>
+                        </Border>
+                    </Grid>
+                    <CheckBox HorizontalAlignment="Right" VerticalAlignment="Top" Content="Markdown" IsChecked="{Binding IsMarkdownRendering, Mode=TwoWay}" Foreground="Gray" Visibility="{Binding ShowMarkdownToggle, Converter={StaticResource boolVis}}" />
                 </Grid>
             </Border>
         </DataTemplate>
