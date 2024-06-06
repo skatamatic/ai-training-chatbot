@@ -38,6 +38,12 @@ public class CSharpService : ICSharpService
             {
                 var result = await _finder.FindDefinitions(filepath, request.MaxDepth);
                 var analysis = await _analyzer.Analyze(result,filepath);
+
+                if (request.IncludeTargetFile)
+                {
+                    analysis.TargetFileContent = await File.ReadAllTextAsync(filepath);
+                }
+
                 results.Add(analysis);
             }
 
@@ -59,6 +65,8 @@ public class CSharpDefinitionsRequest
 {
     public string[] Filepaths { get; set; }
     public int MaxDepth { get; set; }
+
+    public bool IncludeTargetFile { get; set; }
 }
 
 public class CSharpDefinitionsResponse
