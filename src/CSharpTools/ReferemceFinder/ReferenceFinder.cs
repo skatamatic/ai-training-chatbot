@@ -380,9 +380,10 @@ public partial class ReferenceFinder : IDisposable
             if (relevantNode == null) continue;
 
             var definitionSymbol = CreateDefinition(namedTypeSymbol, relevantNode);
-            if (!definitionResult.Definitions.ContainsKey(definitionSymbol.FullName))
+            string key = $"{location.SourceTree.FilePath}:{namedTypeSymbol.Name}";
+            if (!definitionResult.Definitions.ContainsKey(key))
             {
-                definitionResult.Definitions[definitionSymbol.FullName] = definitionSymbol;
+                definitionResult.Definitions[key] = definitionSymbol;
                 await FindNestedDefinitionsAsync(solution, relevantNode, depth, results, currentDepth + 1, visitedDocuments);
             }
         }

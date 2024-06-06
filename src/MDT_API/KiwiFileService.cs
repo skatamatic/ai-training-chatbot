@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using ServiceInterface;
+using Shared;
 using System.Text;
 
 namespace MDT_API;
@@ -106,11 +106,12 @@ public class KiwiFiles
     };
 }
 
-public interface IKiwiFileService
+public interface IKiwiService
 {
     string GetInfoForAllKiwiFiles();
     Task<string> FetchFile(string address, KiwiFile file);
     Task<string> GetSensorValues(string address, string[] filter = null);
+    Task<string> GetAlarms(string address);
 }
 
 public class KiwiSystemMessages : ISystemMessageProvider
@@ -121,7 +122,7 @@ public class KiwiSystemMessages : ISystemMessageProvider
     public string SystemMessage => KiwiIntegrationsSystemMessage;
 }
 
-public class KiwiFileService : IKiwiFileService
+public class KiwiFileService : IKiwiService
 {
     private readonly HttpClient httpClient;
 
@@ -185,6 +186,58 @@ public class KiwiFileService : IKiwiFileService
         {
             return e.Message;
         }
+    }
+
+    public async Task<string> GetActiveAlarms(string address)
+    {
+        var command = new
+        {
+            command = new
+            {
+                commandId = "REQUEST_CURRENT_CONTROLLER_FAULTS"
+            }
+        };
+
+        try
+        {
+            var json = await SendCommandAsync(address, command);
+            return json.ToString();
+        }
+        catch (Exception e)
+        {
+            return e.Message;
+        }
+    }
+
+    public async Task<string> GetActiveJ1939Faults(string address)
+    {
+        var command = new
+        {
+            command = new
+            {
+                commandId = "REQUEST_CURRENT_J1939_DIAGNOSTIC_CODES"
+            }
+        };
+
+        try
+        {
+            var json = await SendCommandAsync(address, command);
+            return json.ToString();
+        }
+        catch (Exception e)
+        {
+            return e.Message;
+        }
+    }
+
+    public async Task<string> GetAlarms(string address)
+    {
+        var alarms = GetActiveAlarms(address);
+        var j1939 = GetActiveJ1939Faults(address);
+
+        await Task.WhenAll(alarms, j1939);
+
+        return JsonConvert.SerializeObject(new { alarms = alarms.Result, j1939Faults = j1939.Result });
     }
 
     public async Task<JObject> SendCommandAsync(string ip, object command, string endpoint = "commands")

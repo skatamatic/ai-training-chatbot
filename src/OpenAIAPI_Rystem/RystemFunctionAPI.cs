@@ -11,16 +11,18 @@ public class RystemFunctionAPI : IOpenAIAPI
     private readonly IOpenAi _api;
     private readonly OpenAIConfig _config;
 
-    private Dictionary<string, ChatSession> _sessions = new();
-    private Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
+    private readonly Dictionary<string, ChatSession> _sessions = new();
+    private readonly Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
+    private readonly IEnumerable<ISystemMessageProvider> _systemMessages;
 
     public string ActiveSessionId { get; private set; }
     public string SystemPrompt { get; set; }
 
-    public RystemFunctionAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions)
+    public RystemFunctionAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions, IEnumerable<ISystemMessageProvider> systemMessages)
     {
         _config = config;
         _api = factory.Create();
+        _systemMessages = systemMessages;
 
         foreach (var function in chatFunctions)
         {
@@ -69,6 +71,11 @@ public class RystemFunctionAPI : IOpenAIAPI
         if (!string.IsNullOrEmpty(SystemPrompt))
         {
             request.AddSystemMessage(SystemPrompt);
+        }
+
+        foreach (var provider in _systemMessages)
+        {
+            request.AddSystemMessage(provider.SystemMessage);
         }
 
         var result = await request.ExecuteAsync(false);

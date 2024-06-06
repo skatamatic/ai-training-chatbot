@@ -1,5 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace AI_Training_API
 {
@@ -36,5 +38,22 @@ namespace AI_Training_API
 
             inputField.Focus();
         }
+
+        private void MarkdownScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (!e.Handled)
+            {
+                e.Handled = true; // Mark the event as handled
+                var eventArg = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+                {
+                    RoutedEvent = MouseWheelEvent,
+                    Source = sender
+                };
+
+                scrollViewer.RaiseEvent(eventArg);
+            }
+        }
+
+        
     }
 }

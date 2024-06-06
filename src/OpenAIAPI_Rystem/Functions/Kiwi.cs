@@ -1,6 +1,6 @@
 ﻿using MDT_API;
 using Rystem.OpenAi.Chat;
-using ServiceInterface;
+using Shared;
 
 namespace OpenAIAPI_Rystem.Functions
 {
@@ -12,7 +12,7 @@ namespace OpenAIAPI_Rystem.Functions
 
         public Type Input => typeof(KiwiGetFileInfoFunctionParameters);
 
-        readonly IKiwiFileService kiwiService = new KiwiFileService();
+        readonly IKiwiService kiwiService = new KiwiFileService();
 
         public Task<object> WrapAsync(string message)
         {
@@ -32,9 +32,9 @@ namespace OpenAIAPI_Rystem.Functions
 
         public override Type Input => typeof(FetchKiwiFileParameters);
 
-        readonly IKiwiFileService kiwiService;
+        readonly IKiwiService kiwiService;
 
-        public FetchKiwiFileFunction(IKiwiFileService kiwiService, IFunctionInvocationEmitter emitter) 
+        public FetchKiwiFileFunction(IKiwiService kiwiService, IFunctionInvocationEmitter emitter) 
             : base(emitter)
         {
             this.kiwiService = kiwiService;
@@ -66,9 +66,9 @@ namespace OpenAIAPI_Rystem.Functions
 
         public override Type Input => typeof(GetKiwiSensorValuesParameters);
 
-        readonly IKiwiFileService kiwiService;
+        readonly IKiwiService kiwiService;
 
-        public GetKiwiSensorValuesFunction(IKiwiFileService kiwiService, IFunctionInvocationEmitter emitter)
+        public GetKiwiSensorValuesFunction(IKiwiService kiwiService, IFunctionInvocationEmitter emitter)
             : base(emitter)
         {
             this.kiwiService = kiwiService;
@@ -89,6 +89,50 @@ namespace OpenAIAPI_Rystem.Functions
                 return new FetchKiwiFileResult() { Error = ex.ToString() };
             }
         }
+    }
+
+    public class GetKiwiAlarmsFunction : FunctionBase
+    {
+        public override string Name => "get_active_alarms";
+
+        public override string Description => $"Queries the current active alarms (both kiwi and j1939 faults)";
+
+        public override Type Input => typeof(GetKiwiAlarmsParameters);
+
+        readonly IKiwiService kiwiService;
+
+        public GetKiwiAlarmsFunction(IKiwiService kiwiService, IFunctionInvocationEmitter emitter)
+            : base(emitter)
+        {
+            this.kiwiService = kiwiService;
+        }
+
+        protected override async Task<object> ExecuteFunctionAsync(object request)
+        {
+            try
+            {
+                GetKiwiAlarmsParameters parameters = (GetKiwiAlarmsParameters)request;
+
+                var content = await kiwiService.GetAlarms(parameters.IPAddress);
+
+                return new GetKiwiAlarmsResult() { Content = content };
+            }
+            catch (Exception ex)
+            {
+                return new GetKiwiAlarmsResult() { Error = ex.ToString() };
+            }
+        }
+    }
+
+    public class GetKiwiAlarmsParameters
+    {
+        public string IPAddress { get; set; }
+    }
+
+    public class GetKiwiAlarmsResult
+    {
+        public string Error { get; set; }
+        public string Content { get; set; }
     }
 
     public class GetKiwiSensorValuesParameters

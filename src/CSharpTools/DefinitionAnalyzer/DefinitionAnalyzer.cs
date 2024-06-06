@@ -43,10 +43,19 @@ public partial class DefinitionAnalyzer
 
     private AnalysisResult InitializeAnalysisResult(IEnumerable<DefinitionResult> definitionResults)
     {
+        Dictionary<string, Definition> combined = new();
+
+        foreach (var kvp in definitionResults.SelectMany(x=>x.Definitions))
+        {
+            if (!combined.ContainsKey(kvp.Key))
+            {
+                combined[kvp.Key] = kvp.Value;
+            }
+        }
+
         var result = new AnalysisResult
         {
-            Definitions = definitionResults.SelectMany(x => x.Definitions.Values)
-                                           .Distinct(new DefinitionCompararer())
+            Definitions = combined.Select(x=>x.Value)
         };
 
         return result;

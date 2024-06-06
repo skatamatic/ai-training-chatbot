@@ -1,8 +1,8 @@
 ﻿using CSharpTools;
 using Microsoft.CodeAnalysis;
 
-const string FILENAME = "D:\\Repos\\worklink-app\\Assets\\Scripts\\ARTracking\\ARTrackingPlatformServices\\MultiPoseTracking.cs";
-const int MAX_DEPTH = 3;
+const string FILENAME = "E:\\repos\\ai-training-chatbot\\src\\OpenAIAPI_Rystem\\Functions\\CSharpService.cs";
+const int MAX_DEPTH = 2;
 
 var startCol = Console.ForegroundColor;
 var startRow = Console.CursorTop;

@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnityUnitTestGenerator", "U
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTestGeneratorCLI", "UnitTestGeneratorCLI\UnitTestGeneratorCLI.csproj", "{651B9B77-2D8E-45C7-8151-D6C1B6127565}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MDT_API", "MDT_API\MDT_API.csproj", "{82D19A00-D8E6-4C70-8436-A83AFBCDA761}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{651B9B77-2D8E-45C7-8151-D6C1B6127565}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{651B9B77-2D8E-45C7-8151-D6C1B6127565}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{651B9B77-2D8E-45C7-8151-D6C1B6127565}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82D19A00-D8E6-4C70-8436-A83AFBCDA761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82D19A00-D8E6-4C70-8436-A83AFBCDA761}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82D19A00-D8E6-4C70-8436-A83AFBCDA761}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82D19A00-D8E6-4C70-8436-A83AFBCDA761}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
