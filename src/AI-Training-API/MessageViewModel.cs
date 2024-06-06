@@ -27,17 +27,23 @@ public class MessageViewModel : ObservableObject
         {
             string openingTag1 = "```markdown";
             string openingTag2 = "```";
+            string headingTag = "#";
+
             int length = openingTag1.Length;
 
             string closingTag = "```";
 
             int startIndex = Message.IndexOf(openingTag1);
+            int headingIndex = Message.IndexOf(headingTag);
 
             if (startIndex == -1)
             {
                 startIndex = Message.IndexOf(openingTag2);
                 length = openingTag2.Length;
             }
+
+            if (headingIndex != -1 && headingIndex < startIndex)
+                return Message;
 
             if (startIndex != -1)
             {
@@ -79,7 +85,7 @@ public class MessageViewModel : ObservableObject
         Type = type;
         Message = message;
         ShowMarkdownToggle = type is ChatMessageType.Bot;
-        IsMarkdownRendering = ContainsMarkdown(MarkdownMessage);
+        IsMarkdownRendering = ShowMarkdownToggle && ContainsMarkdown(MarkdownMessage);
     }
 
     static bool ContainsMarkdown(string text)
