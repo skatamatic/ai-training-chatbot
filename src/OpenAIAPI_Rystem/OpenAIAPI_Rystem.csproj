@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MDT_API\MDT_API.csproj" />
     <ProjectReference Include="..\OpenAIAPI_BasicRest\OpenAIAPI_BasicRest.csproj" />
   </ItemGroup>
 

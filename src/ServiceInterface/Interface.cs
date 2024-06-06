@@ -17,3 +17,8 @@ public interface IFunctionInvocationEmitter
     void EmitInvocation(string functionName, string request);
     void EmitResult(string functionName, string result);
 }
+
+public interface ISystemMessageProvider
+{
+    string SystemMessage { get; }
+}
