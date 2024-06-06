@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AI_Training_API"
+        xmlns:mdxam="clr-namespace:MdXaml;assembly=MdXaml"
         mc:Ignorable="d"
         Loaded="Window_Loaded"
         Title="MainWindow" Height="450" Width="800" Background="#0F0F0F">
@@ -12,8 +13,44 @@
         <local:BoolToHeightConverter x:Key="boolToMaxHeightConverter" />
 
         <DataTemplate x:Key="DefaultMessageTemplate" DataType="local:MessageViewModel">
-            <Border Style="{StaticResource MessageContainerBorder}">
-                <TextBox Text="{Binding Message, Mode=OneWay}" Style="{StaticResource MessageTextStyle}" />
+            <Border>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource MessageContainerBorder}">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMarkdownRendering}" Value="True">
+                                <Setter Property="Background" Value="White" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <TextBox Text="{Binding Message, Mode=OneWay}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource MessageTextStyle}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMarkdownRendering}" Value="True" >
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                    <mdxam:MarkdownScrollViewer Markdown="{Binding MarkdownMessage, Mode=OneWay}" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="MarkdownScrollViewer_PreviewMouseWheel">
+                        <mdxam:MarkdownScrollViewer.Style>
+                            <Style TargetType="mdxam:MarkdownScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMarkdownRendering}" Value="True" >
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </mdxam:MarkdownScrollViewer.Style>
+                    </mdxam:MarkdownScrollViewer>
+                    <CheckBox HorizontalAlignment="Right" VerticalAlignment="Top" Content="Render Markdown" IsChecked="{Binding IsMarkdownRendering, Mode=TwoWay}" Foreground="Gray" Visibility="{Binding ShowMarkdownToggle, Converter={StaticResource boolVis}}" />
+                </Grid>
             </Border>
         </DataTemplate>
 
