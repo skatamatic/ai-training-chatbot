@@ -185,7 +185,6 @@ public class GetKiwiSensorConfigsResult
     public string Content { get; set; }
 }
 
-
 public class GetKiwiAlarmConfigsResult
 {
     public string Error { get; set; }

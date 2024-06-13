@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface ICSharpService
 {
@@ -37,7 +37,7 @@ public class CSharpService : ICSharpService
             foreach (var filepath in request.Filepaths)
             {
                 var result = await _finder.FindDefinitions(filepath, request.MaxDepth);
-                var analysis = await _analyzer.Analyze(result,filepath);
+                var analysis = await _analyzer.Analyze(result, filepath);
                 results.Add(analysis);
             }
 

@@ -1,7 +1,8 @@
 ﻿using InfluxData.Net.InfluxDb;
 using Newtonsoft.Json;
+using OpenAIAPI_Rystem.Functions;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface IInfluxService
 {
@@ -16,12 +17,12 @@ public class InfluxService : IInfluxService
         try
         {
             var client = new InfluxDbClient(request.Host, "", "", InfluxData.Net.Common.Enums.InfluxDbVersion.Latest);
-            
+
             var response = await client.RequestClient.QueryAsync(request.Query, HttpMethod.Get, request.Database);
-            
+
             return new InfluxResponse() { Result = JsonConvert.SerializeObject(response) };
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             return new InfluxResponse() { Error = ex.Message };
         }
