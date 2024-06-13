@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAIAPI_Rystem;
 using OpenAIAPI_Rystem.Functions;
+using OpenAIAPI_Rystem.Services;
 using Shared;
 using System;
 using System.IO;
