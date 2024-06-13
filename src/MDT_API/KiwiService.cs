@@ -112,21 +112,32 @@ public interface IKiwiService
     Task<string> FetchFile(string address, KiwiFile file);
     Task<string> GetSensorValues(string address, string[] filter = null);
     Task<string> GetAlarms(string address);
+    Task<string> GetSensorConfigs(string address);
+    Task<string> GetAlarmConfigs(string address);
 }
 
 public class KiwiSystemMessages : ISystemMessageProvider
 {
     public const string KiwiIntegrationsSystemMessage =
-        @"You are a chat bot that integrates with a control system called 'Kiwi', created by Mobile Data Technologies.  You have several functions at your disposal to do a variety of tasks associated with this control system.  Kiwi is a general purpose control software that is primarily (but not exclusively) used to control industrial equipment in the hydraulic fracturing industry (namely frac pumps, blenders, chemical units, datavans etc).  Do not ask for approval before executing any functions, even if there are several to execute consequtively.  If you start a new session, give it this system message along with any relevant context.";
+        @"
+You are a chat bot that integrates with a control system called 'Kiwi', created by Mobile Data Technologies.  
+You have several functions at your disposal to do a variety of tasks associated with this control system.  
+Kiwi is a general purpose control software that is primarily (but not exclusively) used to control industrial equipment in the hydraulic fracturing industry (namely frac pumps, blenders, chemical units, datavans etc).  
+Do not ask for approval before executing any functions, even if there are several to execute consequtively.  
+If you start a new session, give it this system message along with any relevant context.
+
+Some functions (like get_alarm_configs and get_sensor_configs) are prefered over just grabbing the config files.  The config files are a base configuration but do not necessarily reflect the active runtime configuration.  Only fetch files when asked to for these.
+
+If doing markdown - prefer tabular formatting for things like sensor and alarm values.  As well as configuration.";
 
     public string SystemMessage => KiwiIntegrationsSystemMessage;
 }
 
-public class KiwiFileService : IKiwiService
+public class KiwiService : IKiwiService
 {
     private readonly HttpClient httpClient;
 
-    public KiwiFileService()
+    public KiwiService()
     {
         httpClient = new();
     }
@@ -238,6 +249,49 @@ public class KiwiFileService : IKiwiService
         await Task.WhenAll(alarms, j1939);
 
         return JsonConvert.SerializeObject(new { alarms = alarms.Result, j1939Faults = j1939.Result });
+    }
+
+    public async Task<string> GetSensorConfigs(string address)
+    {
+        var command = new
+        {
+            command = new
+            {
+                commandId = "GET_CURRENT_SENSOR_CONFIG"
+            }
+        };
+
+        try
+        {
+            var json = await SendCommandAsync(address, command, "config");
+            return json.ToString();
+        }
+        catch (Exception e)
+        {
+            return e.Message;
+        }
+    }
+
+    public async Task<string> GetAlarmConfigs(string address)
+    {
+        var command = new
+        {
+            command = new
+            {
+                includeAlarmConfigInResponse = true,
+                commandId = "GET_ALARM_CONSTRAINTS"
+            }
+        };
+
+        try
+        {
+            var json = await SendCommandAsync(address, command, "config");
+            return json.ToString();
+        }
+        catch (Exception e)
+        {
+            return e.Message;
+        }
     }
 
     public async Task<JObject> SendCommandAsync(string ip, object command, string endpoint = "commands")

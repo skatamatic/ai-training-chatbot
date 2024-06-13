@@ -70,11 +70,12 @@ public partial class App : Application
         services.AddSingleton<ITestRunnerService, UnityTestRunnerService>();
         services.AddOpenAiChatFunction<TestRunnerFunction>();*/
 
-        services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiFileService>();
+        services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiService>();
         services.AddOpenAiChatFunction<FetchKiwiFileFunction>();
         services.AddOpenAiChatFunction<GetKiwiAlarmsFunction>();
-        services.AddOpenAiChatFunction<GetKiwiFileDescriptionsFunction>();
         services.AddOpenAiChatFunction<GetKiwiSensorValuesFunction>();
+        services.AddOpenAiChatFunction<GetKiwiAlarmConfigsFunction>();
+        services.AddOpenAiChatFunction<GetKiwiSensorConfigsFunction>();
         services.AddSingleton<ISystemMessageProvider, MDT_API.KiwiSystemMessages>();
 
         services.AddSingleton<FunctionInvocationObserver>();

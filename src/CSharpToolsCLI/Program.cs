@@ -93,7 +93,7 @@ void ClearConsoleRow(int row)
 {
     Console.CursorLeft = 0;
     Console.CursorTop = row;
-    Console.Write("                                                                                                                                                                                         ");
+    Console.Write(new string(' ', 500));
     Console.CursorLeft = 0;
     Console.CursorTop = row;
 }
