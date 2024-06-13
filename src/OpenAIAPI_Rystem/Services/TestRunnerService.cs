@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface ITestRunnerService
 {
@@ -31,7 +31,7 @@ public class UnityTestRunnerService : ITestRunnerService
         try
         {
             string filter = null;
-            
+
             if (request.IndividualTestFilter != null && request.IndividualTestFilter.Length > 0)
             {
                 filter = UnityTestRunner.BuildMultiTestFilter(request.IndividualTestFilter);

@@ -1,6 +1,7 @@
-﻿using Shared;
+﻿using OpenAIAPI_Rystem.Functions;
+using Shared;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface IWeatherService
 {

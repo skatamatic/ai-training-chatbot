@@ -5,7 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface IMySqlService
 {
@@ -26,11 +26,11 @@ public class MySqlService : IMySqlService
         try
         {
             using var connection = GetConnection(request.Host, request.Database, request.Username, request.Password);
-            
+
             await connection.OpenAsync();
             using var command = new MySqlCommand(request.Query, connection);
             using var reader = await command.ExecuteReaderAsync();
-            
+
             var dataTable = new DataTable();
             dataTable.Load(reader);
 
@@ -49,7 +49,7 @@ public class MySqlService : IMySqlService
             using var connection = GetConnection(request.Host, request.Database, request.Username, request.Password);
             await connection.OpenAsync();
             using var command = new MySqlCommand(request.Query, connection);
-            
+
             int rowsAffected = await command.ExecuteNonQueryAsync();
             return new MySqlResponse() { Result = $"Rows affected: {rowsAffected}" };
         }

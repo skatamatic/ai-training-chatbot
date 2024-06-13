@@ -1,9 +1,10 @@
 ﻿using Newtonsoft.Json;
+using OpenAIAPI_Rystem.Functions;
 using System.Diagnostics;
 using System.Management.Automation;
 using System.Text;
 
-namespace OpenAIAPI_Rystem.Functions;
+namespace OpenAIAPI_Rystem.Services;
 
 public interface ISystemService
 {
@@ -168,7 +169,7 @@ public class SystemService : ISystemService
     private async Task<PowerShellScriptResponse> RunScriptInProcessAsync(string script)
     {
         using var powerShell = PowerShell.Create();
-        
+
         powerShell.AddScript(script);
         var results = await Task.Run(() => powerShell.Invoke());
 
