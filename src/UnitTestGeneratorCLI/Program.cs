@@ -55,10 +55,10 @@ class Program
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
         services.AddSingleton<IFunctionInvocationEmitter, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
 
-        services.AddSingleton<IUnitTestGenerator, UnitTestGenerator>(sp =>
+        services.AddSingleton<IUnitTestGenerator, UnityTestGenerator>(sp =>
         {
             var outputAction = new Action<string>(Console.WriteLine);
-            return new UnitTestGenerator(generationConfig, sp.GetRequiredService<IOpenAIAPI>(), outputAction);
+            return new UnityTestGenerator(generationConfig, sp.GetRequiredService<IOpenAIAPI>(), outputAction);
         });
     }
 }
