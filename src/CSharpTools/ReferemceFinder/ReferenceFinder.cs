@@ -298,20 +298,15 @@ public partial class ReferenceFinder : IDisposable
         }
     }
 
-    private async Task FindDefinitionsAsync(Solution solution, Document document, int depth, Dictionary<string, DefinitionResult> results, int currentDepth = 0, HashSet<DocumentId> visitedDocuments = null)
+    private async Task FindDefinitionsAsync(Solution solution, Document document, int depth, Dictionary<string, DefinitionResult> results, int currentDepth = 0)
     {
         if (currentDepth > depth) return;
-
-        visitedDocuments ??= new HashSet<DocumentId>();
-        if (visitedDocuments.Contains(document.Id)) return;
-
-        visitedDocuments.Add(document.Id);
 
         var semanticModel = await document.GetSemanticModelAsync();
         var root = await semanticModel.SyntaxTree.GetRootAsync();
         var nodes = root.DescendantNodes().Where(node => semanticModel.GetSymbolInfo(node).Symbol != null);
 
-        await ProcessNodesForDefinitionsAsync(solution, nodes, document.FilePath, depth, results, currentDepth, visitedDocuments);
+        await ProcessNodesForDefinitionsAsync(solution, nodes, document.FilePath, depth, results, currentDepth);
     }
 
     private async Task ProcessNodesForDefinitionsAsync(
@@ -320,8 +315,7 @@ public partial class ReferenceFinder : IDisposable
         string filePath,
         int depth,
         Dictionary<string, DefinitionResult> results,
-        int currentDepth,
-        HashSet<DocumentId> visitedDocuments)
+        int currentDepth)
     {
         foreach (var node in nodes)
         {
@@ -339,7 +333,7 @@ public partial class ReferenceFinder : IDisposable
 
             if (definition == null) continue;
 
-            await ProcessDefinitionLocationsAsync(solution, definition, namedTypeSymbol, depth, results, currentDepth, visitedDocuments, definitionResult);
+            await ProcessDefinitionLocationsAsync(solution, definition, namedTypeSymbol, depth, results, currentDepth, definitionResult);
         }
     }
 
@@ -371,7 +365,6 @@ public partial class ReferenceFinder : IDisposable
         int depth,
         Dictionary<string, DefinitionResult> results,
         int currentDepth,
-        HashSet<DocumentId> visitedDocuments,
         DefinitionResult definitionResult)
     {
         foreach (var location in definition.Locations.Where(loc => loc.SourceTree != null))
@@ -384,7 +377,7 @@ public partial class ReferenceFinder : IDisposable
             if (!definitionResult.Definitions.ContainsKey(key))
             {
                 definitionResult.Definitions[key] = definitionSymbol;
-                await FindNestedDefinitionsAsync(solution, relevantNode, depth, results, currentDepth + 1, visitedDocuments);
+                await FindNestedDefinitionsAsync(solution, relevantNode, depth, results, currentDepth + 1);
             }
         }
     }
@@ -410,12 +403,12 @@ public partial class ReferenceFinder : IDisposable
         };
     }
 
-    private async Task FindNestedDefinitionsAsync(Solution solution, SyntaxNode relevantNode, int depth, Dictionary<string, DefinitionResult> results, int currentDepth, HashSet<DocumentId> visitedDocuments)
+    private async Task FindNestedDefinitionsAsync(Solution solution, SyntaxNode relevantNode, int depth, Dictionary<string, DefinitionResult> results, int currentDepth)
     {
         if (currentDepth > depth) return;
 
         var nestedNodes = relevantNode.DescendantNodes();
-        await ProcessNodesForDefinitionsAsync(solution, nestedNodes, relevantNode.SyntaxTree.FilePath, depth, results, currentDepth, visitedDocuments);
+        await ProcessNodesForDefinitionsAsync(solution, nestedNodes, relevantNode.SyntaxTree.FilePath, depth, results, currentDepth);
     }
 
     private static List<string> GetNamespaceList(INamespaceSymbol namespaceNode)
