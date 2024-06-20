@@ -1,8 +1,8 @@
-﻿using static CSharpTools.ReferenceFinder;
+﻿using CSharpTools.ReferenceFinder;
 
-namespace CSharpTools;
+namespace CSharpTools.DefinitionAnalyzer;
 
-public partial class DefinitionAnalyzer
+public class DefinitionAnalyzerService
 {
     private readonly Action<string> _output;
     private const int ExcellentLinesOfCode = 500;
@@ -14,9 +14,9 @@ public partial class DefinitionAnalyzer
         ["ITickProvider"] = ("Tick providers should be mocked", "MockTickProvider")
     };
 
-    private readonly ReferenceFinder _finder;
+    private readonly ReferenceFinderService _finder;
 
-    public DefinitionAnalyzer(ReferenceFinder finder, Action<string> output)
+    public DefinitionAnalyzerService(ReferenceFinderService finder, Action<string> output)
     {
         _finder = finder;
         _output = output;

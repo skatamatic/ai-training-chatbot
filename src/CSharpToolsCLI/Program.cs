@@ -1,4 +1,6 @@
 ﻿using CSharpTools;
+using CSharpTools.DefinitionAnalyzer;
+using CSharpTools.ReferenceFinder;
 using CSharpTools.TestRunner;
 using Microsoft.CodeAnalysis;
 
@@ -84,11 +86,11 @@ async Task Test_TestGen()
 
     Console.WriteLine($"Loading file '{FILENAME}', max depth: {MAX_DEPTH}");
 
-    var finder = new ReferenceFinder(output);
+    var finder = new ReferenceFinderService(output);
 
     Console.CursorVisible = false;
     var defResult = await finder.FindDefinitions(FILENAME, MAX_DEPTH);
-    var analyzer = new DefinitionAnalyzer(finder, output);
+    var analyzer = new DefinitionAnalyzerService(finder, output);
     var analyisResult = await analyzer.Analyze(defResult, FILENAME);
     Console.CursorVisible = true;
 
@@ -121,8 +123,8 @@ async Task Test_TestGen()
 
     Console.ForegroundColor = analyisResult.TestWorthyness switch
     {
-        DefinitionAnalyzer.TestWorthyness.Excellent => ConsoleColor.Green,
-        DefinitionAnalyzer.TestWorthyness.Okay => ConsoleColor.Yellow,
+        TestWorthyness.Excellent => ConsoleColor.Green,
+        TestWorthyness.Okay => ConsoleColor.Yellow,
         _ => ConsoleColor.Red
     };
 

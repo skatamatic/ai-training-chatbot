@@ -4,12 +4,12 @@ using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Text.RegularExpressions;
 
-namespace CSharpTools;
+namespace CSharpTools.ReferenceFinder;
 
 /// <summary>
 /// Class responsible for finding references and definitions in C# code.
 /// </summary>
-public partial class ReferenceFinder : IDisposable
+public partial class ReferenceFinderService : IDisposable
 {
     private static readonly string[] ExcludedNamespaces = new[]
     {
@@ -76,7 +76,7 @@ public partial class ReferenceFinder : IDisposable
     private readonly Action<string> _output;
     private readonly Dictionary<string, (Solution solution, MSBuildWorkspace workspace)> solutions = new();
 
-    public ReferenceFinder(Action<string> output)
+    public ReferenceFinderService(Action<string> output)
     {
         _output = output;
     }
@@ -147,27 +147,9 @@ public partial class ReferenceFinder : IDisposable
         return null;
     }
 
-    /// <summary>
-    /// Crawls up the directory tree to find the solution file for the specified file path
-    /// </summary>
-    public static string FindSolutionFile(string filePath)
-    {
-        var directory = Path.GetDirectoryName(filePath);
-        while (!string.IsNullOrEmpty(directory))
-        {
-            var solutionFile = Directory.GetFiles(directory, "*.sln", SearchOption.TopDirectoryOnly);
-            if (solutionFile.Length > 0)
-            {
-                return solutionFile[0];
-            }
-            directory = Directory.GetParent(directory)?.FullName;
-        }
-        return null;
-    }
-
     private async Task<Solution> GetSolution(string filepath)
     {
-        var path = FindSolutionFile(filepath);
+        var path = new SolutionTools.SolutionTools().FindSolutionFile(filepath);
 
         if (solutions.TryGetValue(path, out var entry))
         {
@@ -440,8 +422,12 @@ public partial class ReferenceFinder : IDisposable
         if (symbol.Kind != SymbolKind.NamedType)
             return false;
 
-        var containingNamespace = symbol.ContainingNamespace?.ToDisplayString();
-        return containingNamespace != null && !ExcludedNamespaceRegex.IsMatch(containingNamespace);
+        var rootNamespace = GetNamespaceList(symbol.ContainingNamespace).FirstOrDefault();
+
+        if (rootNamespace == null)
+            return true;
+
+        return !ExcludedNamespaces.Contains(rootNamespace);
     }
 
     public static string CleanCodeSnippet(string codeSnippet)

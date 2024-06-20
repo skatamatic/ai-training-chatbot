@@ -1,30 +1,32 @@
 ﻿using CSharpTools;
+using CSharpTools.DefinitionAnalyzer;
+using CSharpTools.ReferenceFinder;
 using Newtonsoft.Json;
 using Shared;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace UnityUnitTestGenerator;
+namespace UnitTestGenerator;
 
-public class UnitTestGenerator : IUnitTestGenerator
+public class DotNetUnitTestGenerator : IUnitTestGenerator
 {
     GenerationConfig _config;
     IOpenAIAPI _api;
-    ReferenceFinder _refFinder;
-    DefinitionAnalyzer _analyzer;
+    ReferenceFinderService _refFinder;
+    DefinitionAnalyzerService _analyzer;
 
     Action<string> _output;
 
-    public UnitTestGenerator(GenerationConfig config, IOpenAIAPI api, Action<string> output)
+    public DotNetUnitTestGenerator(GenerationConfig config, IOpenAIAPI api, Action<string> output)
     {
         _config = config;
         _api = api;
-        _refFinder = new ReferenceFinder(output);
-        _analyzer = new DefinitionAnalyzer(_refFinder, output);
+        _refFinder = new ReferenceFinderService(output);
+        _analyzer = new DefinitionAnalyzerService(_refFinder, output);
         _output = output;
     }
 
-    public async Task Generate()
+    public async Task<UnitTestGenerationResult> Generate()
     {
         var uutContent = File.ReadAllText(_config.FileToTest);
         var definitions = await _refFinder.FindDefinitions(_config.FileToTest, _config.ContextSearchDepth);
@@ -36,17 +38,15 @@ public class UnitTestGenerator : IUnitTestGenerator
         _output($"Prompting OpenAI with the following prompt:\n{userPrompt}");
 
         _api.SystemPrompt = systemPrompt;
-        var response = await _api.Prompt("Main", userPrompt);
+        string session = Guid.NewGuid().ToString();
+        var response = await _api.Prompt(session, userPrompt);
 
         var json = ExtractJson(response);
-        var testDto = JsonConvert.DeserializeObject<UnitTestDto>(json);
+        var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
-        string writePath = Path.Combine(_config.OutputDirectory, testDto.TestFileName);
         _output($"Got response from OpenAI:\n{response}");
 
-        File.WriteAllText(writePath, testDto.TestFileContent);
-
-        _output($"\n\nWrote to disk: '{writePath}'  All done!");
+        return new UnitTestGenerationResult() { Analysis = analysis, AIResponse = testDto, ChatSession = session, Config = _config };
     }
 
     private string BuildUserPrompt(string uutContent, string context)
@@ -75,7 +75,8 @@ You are to take this csharp code as well as all the accompanying context and gen
 
 NEVER test any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
 NEVER USE REFLECTION or any clever tricks in your tests.
-Sometimes context is supplemented with mocks we use.  Be sure to use them if present! .
+Sometimes context is supplemented with mocks we use.  Be sure to use them if present!
+You cannot moq optional parameters.  Instead, just do an It.IsAny<type>() when you encounter them in an interface.
 Use nunit, moq, Assert.That, and Assert/Act/Arrange with comments indicating Assert/Act/Arrange poritons.  You can do Act/Assert/Act/Assert after if it makes sense to, but only do 1 arrange.
 Often it will be hard to test methods directly, you will need to mock raising events to execute the code.  Make sure to do this and not use reflection.
 Ensure you are using best practices and excellent code quality.  Aim for at least 9 tests for large classes if possible
@@ -97,7 +98,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         return systemPrompt;
     }
 
-    private static string BuildContext(DefinitionAnalyzer.AnalysisResult analysis)
+    private static string BuildContext(AnalysisResult analysis)
     {
         StringBuilder context = new();
         foreach (var definition in analysis.Definitions)

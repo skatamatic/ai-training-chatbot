@@ -1,11 +1,8 @@
-﻿namespace CSharpTools;
+﻿namespace CSharpTools.DefinitionAnalyzer;
 
-public partial class DefinitionAnalyzer
+public enum TestWorthyness
 {
-    public enum TestWorthyness
-    {
-        Excellent,
-        Okay,
-        Poor
-    }
+    Excellent,
+    Okay,
+    Poor
 }

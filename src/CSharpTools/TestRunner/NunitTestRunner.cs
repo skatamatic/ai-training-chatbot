@@ -3,7 +3,15 @@ using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 
-public partial class NUnitTestRunner : IDisposable
+namespace CSharpTools.TestRunner;
+
+public interface IUnitTestRunner
+{
+    Task<TestRunResult> RunTestsAsync(string projectPath, string testFilter = null);
+    Task<TestRunResult> RunFailuresAsync(string projectPath, TestRunResult previousRunResult);
+}
+
+public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
 {
     private readonly Action<string> _output;
     private Workspace _workspace;
@@ -85,7 +93,7 @@ public partial class NUnitTestRunner : IDisposable
 
     private async Task<int> GetTestCountAsync(string projectPath, string testFilter)
     {
-        var arguments = $"test \"{projectPath}\" --no-build --list-tests";
+        var arguments = $"test \"{projectPath}\" --list-tests";
         if (!string.IsNullOrEmpty(testFilter))
         {
             arguments += $" --filter \"FullyQualifiedName~{testFilter}\"";
@@ -270,6 +278,7 @@ public class TestRunResult
     public List<string> Errors { get; set; } = new List<string>();
     public List<TestCaseResult> PassedTests { get; set; } = new List<TestCaseResult>();
     public List<TestCaseResult> FailedTests { get; set; } = new List<TestCaseResult>();
+    public bool Success => PassedTests.Count > 0 && FailedTests.Count == 0 && BuildErrors.Count == 0;
 }
 
 public class TestCaseResult

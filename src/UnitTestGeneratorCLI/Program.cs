@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using CSharpTools.SolutionTools;
+using CSharpTools.TestRunner;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAIAPI_Rystem;
 using Shared;
-using UnityUnitTestGenerator;
+using UnitTestGenerator;
 
 namespace UnitTestGeneratorCLI;
 
@@ -14,8 +16,8 @@ class Program
         using var scope = CreateHostBuilder(args).Build().Services.CreateScope();
         var services = scope.ServiceProvider;
 
-        var generator = services.GetRequiredService<IUnitTestGenerator>();
-        await generator.Generate();
+        var generator = services.GetRequiredService<IUnitTestSorcerer>();
+        await generator.GenerateAsync();
 
         Console.ReadLine();
     }
@@ -40,6 +42,7 @@ class Program
     {
         var openAIConfig = configuration.GetSection("OpenAIConfig").Get<OpenAIConfig>();
         var generationConfig = configuration.GetSection("GenerationConfig").Get<GenerationConfig>();
+        var sorcererConfig = configuration.GetSection("SorcererConfig").Get<UnitTestSorcererConfig>();
 
         services.AddSingleton(openAIConfig);
 
@@ -55,10 +58,48 @@ class Program
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
         services.AddSingleton<IFunctionInvocationEmitter, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
 
-        services.AddSingleton<IUnitTestGenerator, UnityTestGenerator>(sp =>
+        services.AddSingleton<ISolutionTools, SolutionTools>();
+
+        services.AddSingleton<IUnitTestGenerator, DotNetUnitTestGenerator>(sp =>
         {
-            var outputAction = new Action<string>(Console.WriteLine);
-            return new UnityTestGenerator(generationConfig, sp.GetRequiredService<IOpenAIAPI>(), outputAction);
+            var outputAction = new Action<string>(x => {
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine(x);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            });
+
+            return new DotNetUnitTestGenerator(generationConfig, sp.GetRequiredService<IOpenAIAPI>(), outputAction);
+        });
+
+        services.AddSingleton<IUnitTestRunner, NUnitTestRunner>(sp =>
+        {
+            var outputAction = new Action<string>(x => {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine(x);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            });
+            return new NUnitTestRunner(outputAction);
+        });
+
+        services.AddSingleton<IUnitTestFixer, UnitTestFixer>(sp =>
+        {
+            var outputAction = new Action<string>(x => {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(x);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            });
+            return new UnitTestFixer(sp.GetRequiredService<IOpenAIAPI>(), outputAction);
+        });
+
+
+        services.AddSingleton<IUnitTestSorcerer, UnitTestSorcerer>(sp =>
+        {
+            var outputAction = new Action<string>(x => {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(x);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            });
+            return new UnitTestSorcerer(sorcererConfig, sp.GetRequiredService<IUnitTestFixer>(), sp.GetRequiredService<IUnitTestGenerator>(), sp.GetRequiredService<IUnitTestRunner>(), sp.GetRequiredService<ISolutionTools>(), outputAction);
         });
     }
 }

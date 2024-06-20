@@ -3,19 +3,28 @@ using CSharpTools;
 using System.Text;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using CSharpTools.DefinitionAnalyzer;
+using CSharpTools.ReferenceFinder;
 
-namespace UnityUnitTestGenerator;
+namespace UnitTestGenerator;
 
 public class GenerationConfig
 {
-    public string UnityProjectRoot { get; set; }
+    public string ProjectRoot { get; set; }
     public string FileToTest { get; set; }
     public string OutputDirectory { get; set; }
-    public int MaxFixAttempts { get; set; }
     public int ContextSearchDepth { get; set; }
 }
 
-public class UnitTestDto
+public class UnitTestGenerationResult
+{
+    public GenerationConfig Config { get; set; }
+    public UnitTestAIResponse AIResponse { get; set; }
+    public AnalysisResult Analysis { get; set; }
+    public string ChatSession { get; set; }
+}
+
+public class UnitTestAIResponse
 {
     [JsonProperty("test_file_name")]
     public string TestFileName { get; set; }
@@ -25,19 +34,40 @@ public class UnitTestDto
 
     [JsonProperty("notes")]
     public string Notes { get; set; }
+
+    [JsonProperty("general_fix")]
+    public string GeneralFix { get; set; }
+
+    [JsonProperty("test_fixes")]
+    public UnitTestAIFix[] TestFixes { get; set; } = Array.Empty<UnitTestAIFix>();
+}
+
+public class UnitTestAIFix
+{
+    [JsonProperty("test_name")]
+    public string TestName { get; set; }
+
+    [JsonProperty("can_fix")]
+    public bool CanFix { get; set; } = true;
+
+    [JsonProperty("reason")]
+    public string Reason { get; set; }
+
+    [JsonProperty("fix")]
+    public string Fix { get; set; }
 }
 
 public interface IUnitTestGenerator
 {
-    Task Generate();
+    Task<UnitTestGenerationResult> Generate();
 }
 
 public class UnityTestGenerator : IUnitTestGenerator
 {
     GenerationConfig _config;
     IOpenAIAPI _api;
-    ReferenceFinder _refFinder;
-    DefinitionAnalyzer _analyzer;
+    ReferenceFinderService _refFinder;
+    DefinitionAnalyzerService _analyzer;
 
     Action<string> _output;
 
@@ -45,16 +75,12 @@ public class UnityTestGenerator : IUnitTestGenerator
     {
         _config = config;
         _api = api;
-        _refFinder = new ReferenceFinder(output);
-        _analyzer = new DefinitionAnalyzer(_refFinder, output);
+        _refFinder = new ReferenceFinderService(output);
+        _analyzer = new DefinitionAnalyzerService(_refFinder, output);
         _output = output;
     }
 
-    public UnityTestGenerator()
-    {
-    }
-
-    public async Task Generate()
+    public async Task<UnitTestGenerationResult> Generate()
     {
         var uutContent = File.ReadAllText(_config.FileToTest);
         var definitions = await _refFinder.FindDefinitions(_config.FileToTest, _config.ContextSearchDepth);
@@ -66,17 +92,15 @@ public class UnityTestGenerator : IUnitTestGenerator
         _output($"Prompting OpenAI with the following prompt:\n{userPrompt}");
 
         _api.SystemPrompt = systemPrompt;
-        var response = await _api.Prompt("Main", userPrompt);
+        string session = Guid.NewGuid().ToString();
+        var response = await _api.Prompt(session, userPrompt);
 
         var json = ExtractJson(response);
-        var testDto = JsonConvert.DeserializeObject<UnitTestDto>(json);
+        var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
-        string writePath = Path.Combine(_config.OutputDirectory, testDto.TestFileName);
         _output($"Got response from OpenAI:\n{response}");
 
-        File.WriteAllText(writePath, testDto.TestFileContent);
-
-        _output($"\n\nWrote to disk: '{writePath}'  All done!");
+        return new UnitTestGenerationResult() { AIResponse = testDto, Analysis = analysis, ChatSession = session };
     }
 
     private string BuildUserPrompt(string uutContent, string context)
@@ -127,7 +151,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         return systemPrompt;
     }
 
-    private static string BuildContext(DefinitionAnalyzer.AnalysisResult analysis)
+    private static string BuildContext(AnalysisResult analysis)
     {
         StringBuilder context = new();
         foreach (var definition in analysis.Definitions)

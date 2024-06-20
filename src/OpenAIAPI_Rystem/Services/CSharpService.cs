@@ -1,4 +1,6 @@
 ﻿using CSharpTools;
+using CSharpTools.DefinitionAnalyzer;
+using CSharpTools.ReferenceFinder;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -12,15 +14,15 @@ public interface ICSharpService
 
 public class CSharpService : ICSharpService
 {
-    readonly DefinitionAnalyzer _analyzer;
-    readonly ReferenceFinder _finder;
+    readonly DefinitionAnalyzerService _analyzer;
+    readonly ReferenceFinderService _finder;
 
     public event EventHandler<string> OnOutput;
 
     public CSharpService()
     {
-        _finder = new ReferenceFinder(Emit);
-        _analyzer = new DefinitionAnalyzer(_finder, Emit);
+        _finder = new ReferenceFinderService(Emit);
+        _analyzer = new DefinitionAnalyzerService(_finder, Emit);
     }
 
     private void Emit(string output)
@@ -32,7 +34,7 @@ public class CSharpService : ICSharpService
     {
         try
         {
-            List<DefinitionAnalyzer.AnalysisResult> results = new();
+            List<AnalysisResult> results = new();
 
             foreach (var filepath in request.Filepaths)
             {

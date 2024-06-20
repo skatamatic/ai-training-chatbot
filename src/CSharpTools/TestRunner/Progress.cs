@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.MSBuild;
 
+namespace CSharpTools.TestRunner;
+
 public partial class NUnitTestRunner
 {
     private class Progress : IProgress<ProjectLoadProgress>, ILogger

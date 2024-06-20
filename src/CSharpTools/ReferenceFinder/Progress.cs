@@ -2,9 +2,9 @@
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.MSBuild;
 
-namespace CSharpTools;
+namespace CSharpTools.ReferenceFinder;
 
-public partial class ReferenceFinder
+public partial class ReferenceFinderService
 {
     private class Progress : IProgress<ProjectLoadProgress>, IFindReferencesProgress
     {
