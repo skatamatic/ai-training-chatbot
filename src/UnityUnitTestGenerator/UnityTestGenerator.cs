@@ -10,15 +10,11 @@ namespace UnitTestGenerator;
 
 public class GenerationConfig
 {
-    public string ProjectRoot { get; set; }
-    public string FileToTest { get; set; }
-    public string OutputDirectory { get; set; }
     public int ContextSearchDepth { get; set; }
 }
 
 public class UnitTestGenerationResult
 {
-    public GenerationConfig Config { get; set; }
     public UnitTestAIResponse AIResponse { get; set; }
     public AnalysisResult Analysis { get; set; }
     public string ChatSession { get; set; }
@@ -40,6 +36,9 @@ public class UnitTestAIResponse
 
     [JsonProperty("test_fixes")]
     public UnitTestAIFix[] TestFixes { get; set; } = Array.Empty<UnitTestAIFix>();
+
+    [JsonProperty("improvements")]
+    public string[] Improvements { get; set; } = Array.Empty<string>();
 }
 
 public class UnitTestAIFix
@@ -59,7 +58,8 @@ public class UnitTestAIFix
 
 public interface IUnitTestGenerator
 {
-    Task<UnitTestGenerationResult> Generate();
+    Task<UnitTestGenerationResult> AnalyzeOnly(string fileToTest);
+    Task<UnitTestGenerationResult> Generate(string fileToTest);
 }
 
 public class UnityTestGenerator : IUnitTestGenerator
@@ -80,11 +80,11 @@ public class UnityTestGenerator : IUnitTestGenerator
         _output = output;
     }
 
-    public async Task<UnitTestGenerationResult> Generate()
+    public async Task<UnitTestGenerationResult> Generate(string fileToTest)
     {
-        var uutContent = File.ReadAllText(_config.FileToTest);
-        var definitions = await _refFinder.FindDefinitions(_config.FileToTest, _config.ContextSearchDepth);
-        var analysis = _analyzer.Analyze(definitions, _config.FileToTest).Result;
+        var uutContent = File.ReadAllText(fileToTest);
+        var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
+        var analysis = _analyzer.Analyze(definitions, fileToTest).Result;
 
         string systemPrompt = BuildSystemPrompt(uutContent);
         string userPrompt = BuildUserPrompt(uutContent, BuildContext(analysis));
@@ -250,5 +250,10 @@ public void ViewModel_ButtonClicked_SetsAString()
         }
 
         return null;
+    }
+
+    public Task<UnitTestGenerationResult> AnalyzeOnly(string fileToTest)
+    {
+        throw new NotImplementedException();
     }
 }

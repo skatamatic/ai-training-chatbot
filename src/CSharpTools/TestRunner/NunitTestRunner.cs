@@ -44,14 +44,15 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
         }
 
         // List and count the tests to be run
-        var testCount = await GetTestCountAsync(projectPath, testFilter);
+        var (testCount, errors) = await GetTestCountAsync(projectPath, testFilter);
         if (testCount < 0)
         {
             return new TestRunResult
             {
-                Errors = new List<string> { "Failed to list tests." }
+                Errors = errors
             };
         }
+
         _output($"Number of tests to run: {testCount}");
 
         // Run dotnet test
@@ -91,7 +92,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
         }
     }
 
-    private async Task<int> GetTestCountAsync(string projectPath, string testFilter)
+    private async Task<(int count, List<string> errors)> GetTestCountAsync(string projectPath, string testFilter)
     {
         var arguments = $"test \"{projectPath}\" --list-tests";
         if (!string.IsNullOrEmpty(testFilter))
@@ -105,14 +106,14 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
         {
             _output("Failed to list tests.");
             processResult.Output.ForEach(_output);
-            return -1;
+            return (-1, processResult.Output.Where(x=>x.ToLower().Contains("error")).ToList());
         }
 
         var testList = processResult.Output
             .Where(line => line.StartsWith("    "))
             .ToList();
 
-        return testList.Count;
+        return (testList.Count, new List<string>());
     }
 
     async Task<Compilation> GetCompilation(string path)
@@ -176,7 +177,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
         var result = new TestRunResult();
 
         var trxFileName = Path.Combine(Path.GetTempPath(), "TestResults.trx");
-        var arguments = $"test \"{projectPath}\" --no-build --logger \"trx;LogFileName={trxFileName}\"";
+        var arguments = $"test \"{projectPath}\" --logger \"trx;LogFileName={trxFileName}\"";
         if (!string.IsNullOrEmpty(testFilter))
         {
             arguments += $" --filter \"{testFilter}\"";
@@ -262,8 +263,8 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
             {
                 FullName = testCase.Attributes["testName"]?.Value,
                 Result = resultType,
-                Message = testCase.SelectSingleNode("Output/StdOut")?.InnerText ?? string.Empty,
-                StackTrace = testCase.SelectSingleNode("Output/StackTrace")?.InnerText ?? string.Empty
+                Message = resultType == "Passed" ? string.Empty : testCase["Output"]["ErrorInfo"]["Message"].InnerText,
+                StackTrace = resultType == "Passed" ? string.Empty : testCase["Output"]["ErrorInfo"]["StackTrace"].InnerText ?? string.Empty
             };
             results.Add(testCaseResult);
         }

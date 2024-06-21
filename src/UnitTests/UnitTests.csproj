@@ -20,12 +20,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CSharpTools\CSharpTools.csproj" />
+    <ProjectReference Include="..\FakeProject\FakeProject.csproj" />
     <ProjectReference Include="..\ServiceInterface\Shared.csproj" />
     <ProjectReference Include="..\UnityUnitTestGenerator\UnitTestGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="UnitTestGenerator\" />
   </ItemGroup>
 
 </Project>

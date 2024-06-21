@@ -26,11 +26,26 @@ public class DotNetUnitTestGenerator : IUnitTestGenerator
         _output = output;
     }
 
-    public async Task<UnitTestGenerationResult> Generate()
+    public async Task<UnitTestGenerationResult> AnalyzeOnly(string fileToTest)
     {
-        var uutContent = File.ReadAllText(_config.FileToTest);
-        var definitions = await _refFinder.FindDefinitions(_config.FileToTest, _config.ContextSearchDepth);
-        var analysis = _analyzer.Analyze(definitions, _config.FileToTest).Result;
+        var uutContent = File.ReadAllText(fileToTest);
+        var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
+        var analysis = _analyzer.Analyze(definitions, fileToTest).Result;
+
+        var fakeAiResponse = new UnitTestAIResponse()
+        {
+            TestFileName = Path.GetFileName(fileToTest),
+            TestFileContent = File.ReadAllText(fileToTest)
+        };
+
+        return new UnitTestGenerationResult() { AIResponse = fakeAiResponse, Analysis = analysis, ChatSession = Guid.NewGuid().ToString() };
+    }
+
+    public async Task<UnitTestGenerationResult> Generate(string fileToTest)
+    {
+        var uutContent = File.ReadAllText(fileToTest);
+        var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
+        var analysis = _analyzer.Analyze(definitions, fileToTest).Result;
 
         string systemPrompt = BuildSystemPrompt(uutContent);
         string userPrompt = BuildUserPrompt(uutContent, BuildContext(analysis));
@@ -46,7 +61,7 @@ public class DotNetUnitTestGenerator : IUnitTestGenerator
 
         _output($"Got response from OpenAI:\n{response}");
 
-        return new UnitTestGenerationResult() { Analysis = analysis, AIResponse = testDto, ChatSession = session, Config = _config };
+        return new UnitTestGenerationResult() { Analysis = analysis, AIResponse = testDto, ChatSession = session};
     }
 
     private string BuildUserPrompt(string uutContent, string context)
@@ -73,6 +88,8 @@ Here's all the context:
 You are an nunit unit test generation bot.  
 You are to take this csharp code as well as all the accompanying context and generate excellent quality and VERY COMPREHENSIVE unit tests for it.  Write as many tests as you can covering functionality and edge cases (but keep in mind your token limit of 4000 output tokens).
 
+NEVER test with real Task.Delay or Thread.Sleep.  Instead, use Task.Delay(1) or Task.Yield() or Task.CompletedTask in any mocks.
+Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
 NEVER test any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
 NEVER USE REFLECTION or any clever tricks in your tests.
 Sometimes context is supplemented with mocks we use.  Be sure to use them if present!
@@ -109,10 +126,10 @@ Answer with the following json format.  Be mindful to escape it properly:
             {
                 context.AppendLine($"Supplement Object: {definition.Supplement.Definition.FullName}");
                 context.AppendLine($"Reason for supplement: {definition.Supplement.ReasonForSupplementing}");
-                context.AppendLine($"--(START OF SUPPLEMENT CODE)--\n{definition.Supplement.Definition.Code}\n--(END OF CODE)--");
+                context.AppendLine($"--START OF SUPPLEMENT CODE--\n{definition.Supplement.Definition.Code}\n--END OF CODE--");
             }
 
-            context.AppendLine($"--(START OF DEFINITION CODE)--:\n{definition.Code}\n--(END OF CODE)--\n");
+            context.AppendLine($"--START OF DEFINITION CODE--\n{definition.Code}\n--END OF CODE--\n");
             context.AppendLine();
         }
 

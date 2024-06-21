@@ -91,6 +91,17 @@ class Program
             return new UnitTestFixer(sp.GetRequiredService<IOpenAIAPI>(), outputAction);
         });
 
+        services.AddSingleton<IUnitTestEnhancer, UnitTestEnhancer>(sp =>
+        {
+            var outputAction = new Action<string>(x => {
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine(x);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            });
+            return new UnitTestEnhancer(sp.GetRequiredService<IOpenAIAPI>(), outputAction);
+        });
+
+
 
         services.AddSingleton<IUnitTestSorcerer, UnitTestSorcerer>(sp =>
         {
@@ -99,7 +110,7 @@ class Program
                 Console.WriteLine(x);
                 Console.ForegroundColor = ConsoleColor.Gray;
             });
-            return new UnitTestSorcerer(sorcererConfig, sp.GetRequiredService<IUnitTestFixer>(), sp.GetRequiredService<IUnitTestGenerator>(), sp.GetRequiredService<IUnitTestRunner>(), sp.GetRequiredService<ISolutionTools>(), outputAction);
+            return new UnitTestSorcerer(sorcererConfig, sp.GetRequiredService<IUnitTestFixer>(), sp.GetRequiredService<IUnitTestGenerator>(), sp.GetRequiredService<IUnitTestRunner>(), sp.GetRequiredService<ISolutionTools>(), sp.GetRequiredService<IUnitTestEnhancer>(), outputAction);
         });
     }
 }

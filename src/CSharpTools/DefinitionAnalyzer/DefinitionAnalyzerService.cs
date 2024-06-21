@@ -11,7 +11,8 @@ public class DefinitionAnalyzerService
     private static readonly Dictionary<string, (string Reason, string Type)> Supplements = new()
     {
         ["ITimeProvider"] = ("Time providers should be mocked", "MockTimeProvider"),
-        ["ITickProvider"] = ("Tick providers should be mocked", "MockTickProvider")
+        ["ITickProvider"] = ("Tick providers should be mocked", "MockTickProvider"),
+        ["IDelayer"] = ("We should not use real delays in unit tests.  TestDelayer can be used to control timing of awaited delays", "TestDelayer")
     };
 
     private readonly ReferenceFinderService _finder;

@@ -7,8 +7,10 @@ public interface ISolutionTools
 {
     Task<string> SaveTestFile(string sourceFile, string testFileContent);
     string FindProjectFile(string sourceFile);
-
     Task WriteSourceFile(string path, string content);
+    Task<string> ReadSourceFile(string path);
+    string SuggestTestFileLocation(string sourceFile);
+    bool HasTestsAlready(string sourceFile, out string existingTestPath);
 }
 
 public class SolutionTools : ISolutionTools
@@ -177,5 +179,46 @@ public class SolutionTools : ISolutionTools
         }
 
         await File.WriteAllTextAsync(path, content);
+    }
+
+    public async Task<string> ReadSourceFile(string path)
+    {
+        return await File.ReadAllTextAsync(path);
+    }
+
+    public bool HasTestsAlready(string sourceFile, out string existingTestPath)
+    {
+        existingTestPath = SuggestTestFileLocation(sourceFile);
+        if (File.Exists(existingTestPath))
+        {
+            return true;
+        }
+
+        var solutionFile = FindSolutionFile(sourceFile);
+        if (solutionFile == null)
+        {
+            return false;
+        }
+
+        var allProjects = FindAllProjectsInSolution(solutionFile);
+        var testProjects = allProjects.Where(IsTestProject).ToList();
+        var sourceFileNameWithoutExtension = Path.GetFileNameWithoutExtension(sourceFile);
+        var testFileNamePattern = $"{sourceFileNameWithoutExtension}Test";
+
+        foreach (var testProject in testProjects)
+        {
+            var testFiles = Directory.GetFiles(Path.GetDirectoryName(testProject), "*.cs", SearchOption.AllDirectories);
+            foreach (var testFile in testFiles)
+            {
+                if (Path.GetFileNameWithoutExtension(testFile).Contains(testFileNamePattern))
+                {
+                    existingTestPath = testFile;
+                    return true;
+                }
+            }
+        }
+
+        existingTestPath = string.Empty;
+        return false;
     }
 }
