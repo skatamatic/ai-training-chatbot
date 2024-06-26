@@ -95,7 +95,7 @@ public class UnityTestGenerator : IUnitTestGenerator
         string session = Guid.NewGuid().ToString();
         var response = await _api.Prompt(session, userPrompt);
 
-        var json = ExtractJson(response);
+        var json = Util.ExtractJsonFromCompletion(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
         _output($"Got response from OpenAI:\n{response}");
@@ -236,20 +236,6 @@ public void ViewModel_ButtonClicked_SetsAString()
         }
 
         return string.Empty;
-    }
-
-    public static string ExtractJson(string input)
-    {
-        string pattern = @"\{(?:[^{}]|(?<Open>\{)|(?<-Open>\}))+(?(Open)(?!))\}";
-
-        Match match = Regex.Match(input, pattern);
-
-        if (match.Success)
-        {
-            return match.Value;
-        }
-
-        return null;
     }
 
     public Task<UnitTestGenerationResult> AnalyzeOnly(string fileToTest)

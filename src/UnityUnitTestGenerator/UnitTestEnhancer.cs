@@ -37,7 +37,7 @@ public class UnitTestEnhancer : IUnitTestEnhancer
         var session = Guid.NewGuid().ToString();
         var response = await _api.Prompt(session, userPrompt);
 
-        var json = ExtractJson(response);
+        var json = Util.ExtractJsonFromCompletion(response);
         for (int attempt = 0; attempt < MaxRetries; attempt++)
         {
             try
@@ -55,7 +55,7 @@ public class UnitTestEnhancer : IUnitTestEnhancer
                     _output("[UnitTestEnhancer] - Retrying with a prompt to fix the issue...");
                     userPrompt = BuildRetryPrompt(userPrompt, ex.Message);
                     response = await _api.Prompt(session, userPrompt);
-                    json = ExtractJson(response);
+                    json = Util.ExtractJsonFromCompletion(response);
                 }
                 else
                 {
@@ -148,19 +148,5 @@ Answer with the following JSON format.  Be mindful to escape it properly.  Be su
 }}}}""
 ";
         return systemPrompt;
-    }
-
-    static string ExtractJson(string input)
-    {
-        string pattern = @"\{(?:[^{}]|(?<Open>\{)|(?<-Open>\}))+(?(Open)(?!))\}";
-
-        Match match = Regex.Match(input, pattern);
-
-        if (match.Success)
-        {
-            return match.Value;
-        }
-
-        return null;
     }
 }

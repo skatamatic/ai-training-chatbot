@@ -42,7 +42,7 @@ public class UnitTestFixer : IUnitTestFixer
         _api.SystemPrompt = BuildSystemPrompt();
         var response = await _api.Prompt(context.LastGenerationResult.ChatSession, userPrompt);
 
-        var json = ExtractJson(response);
+        var json = Util.ExtractJsonFromCompletion(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
         _output($"[TestFixer] - Got response from OpenAI:\n{JsonConvert.SerializeObject(testDto, Formatting.Indented)}");
@@ -73,14 +73,18 @@ I'll need you to fix those tests.  Here's the result of running them
 You are a unit test fixing bot.  
 You need to fix the provided unit tests.  There could be compilation errors or test failures.  
 For each test failure provide a suspected reason for the failure, how you will fix it in the provided json format.  Then try to fix them all in one pass, and provide the full file in the provided format.
-You can only fix the test code.  Never try to fix the unit under test.  If it is impossible indicate this with the canFix flag as false, and provide a reason in the reason field.  If you CAN fix it, set that flag to true and provide the reason for the failure in the reason field.
-Do NOT try to suggest fixing anything other than test code.  We CANNOT change access modifiers/etc and can only test around such limitations.
+You can only fix the UNIT TEST code.  If you suggest fixing any other code you are WRONG and this is not acceptable.  
+If it is impossible to fix indicate this with the canFix flag as false, and provide a reason in the reason field.  
+If you CAN fix it, set that flag to true and provide the reason for the failure in the reason field.
+NEVER try to suggest fixing anything other than the test code, if an error is in non test code you must fix or remove the failing test.  
+We CANNOT change access modifiers/etc and can only test around such limitations.
 Be very sure you have imported all the correct usings.  
 Pay close attention to access modifiers!!  Only call/access public members and properties.
+
 If there's a more general compilation error fix, indicate that in the 'generalFix' field then fix all relevant portions of the tests that have the issue
 
 If you are trying the same things as a previous attempt this means you are not learning from your mistakes.  You should try something different.  
-If  the same test fails after 3 consecutive attempts, consider it unfixable and remove it.
+If you can't fix test(s) after 3 consecutive attempts, consider them unfixable and remove it or comment it out.  This is IMPORTANT
 
 Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
 Do not include any explanatory comments for any fixes you made that do not otherwise improve the code quality.
@@ -144,150 +148,62 @@ Answer with the following json format.  Be mindful to escape it properly:
 
     private string GetStackContextCode(string stackTrace)
     {
-        try
-        {
-            var lines = stackTrace.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-            var stackFramePattern = @"in (.*):line (\d+)";
-            StringBuilder sb = new();
-
-            var matches = lines.Select(x => Regex.Match(x, stackFramePattern)).Where(x=>x.Success);
-
-            foreach (var match in matches)
-            {
-                if (match.Success)
-                {
-                    var filePath = match.Groups[1].Value;
-                    var lineNumber = int.Parse(match.Groups[2].Value);
-
-                    try
-                    {
-                        var fileLines = File.ReadAllLines(filePath).ToList();
-                        var startLine = Math.Max(lineNumber - 6, 0);
-                        var endLine = Math.Min(lineNumber + 4, fileLines.Count - 1);
-
-                        for (int i = startLine; i <= endLine; i++)
-                        {
-                            if (i == lineNumber - 1)
-                            {
-                                fileLines[i] += " //  <-- Failing line";
-                            }
-                            sb.AppendLine(fileLines[i]);
-                        }
-                        return sb.ToString();
-                    }
-                    catch (Exception ex)
-                    {
-                        _output($"[TestFixer] - Error processing file {filePath}: {ex.Message}");
-                    }
-                }
-            }
-            return sb.ToString();
-            
-        }
-        catch (Exception ex)
-        {
-            _output($"[TestFixer] - Error processing compilation error context: {ex.Message}");
-            return null;
-        }
+        return GetContextFromFile(stackTrace, @"in (.*):line (\d+)");
     }
 
     private string GetCompilationErrorContext(string errorMessage)
     {
+        return GetContextFromFile(errorMessage, @"(.*)\((\d+),\d+\): error CS\d+: .*");
+    }
+
+    private string GetDotNetTestErrorContext(string errorMessage)
+    {
+        return GetContextFromFile(errorMessage, @"^(.*)\((\d+),\d+\): error .*");
+    }
+
+    private string GetContextFromFile(string message, string pattern)
+    {
         try
         {
-            var errorPattern = @"(.*)\((\d+),\d+\): error CS\d+: .*";
-            StringBuilder sb = new();
-
-            var match = Regex.Match(errorMessage, errorPattern);
+            var match = Regex.Match(message, pattern);
             if (match.Success)
             {
                 var filePath = match.Groups[1].Value;
                 var lineNumber = int.Parse(match.Groups[2].Value);
+                return GetFileLines(filePath, lineNumber);
+            }
+        }
+        catch (Exception ex)
+        {
+            _output($"[TestFixer] - Error processing context from message: {ex.Message}");
+        }
+        return null;
+    }
 
-                try
-                {
-                    var fileLines = File.ReadAllLines(filePath).ToList();
-                    var startLine = Math.Max(lineNumber - 6, 0);
-                    var endLine = Math.Min(lineNumber + 4, fileLines.Count - 1);
+    private string GetFileLines(string filePath, int lineNumber)
+    {
+        try
+        {
+            var fileLines = File.ReadAllLines(filePath).ToList();
+            var startLine = Math.Max(lineNumber - 6, 0);
+            var endLine = Math.Min(lineNumber + 4, fileLines.Count - 1);
+            StringBuilder sb = new();
 
-                    _output($"[TestFixer] - Fetching lines {startLine + 1} to {endLine + 1} from {filePath}:");
-                    for (int i = startLine; i <= endLine; i++)
-                    {
-                        if (i == lineNumber - 1)
-                        {
-                            fileLines[i] += " //  <-- Compilation error here";
-                        }
-                        sb.AppendLine(fileLines[i]);
-                    }
-                }
-                catch (Exception ex)
+            _output($"[TestFixer] - Fetching lines {startLine + 1} to {endLine + 1} from {filePath}:");
+            for (int i = startLine; i <= endLine; i++)
+            {
+                if (i == lineNumber - 1)
                 {
-                    _output($"[TestFixer] - Error processing file {filePath}: {ex.Message}");
+                    fileLines[i] += " //  <-- Issue here";
                 }
+                sb.AppendLine(fileLines[i]);
             }
             return sb.ToString();
         }
         catch (Exception ex)
         {
-            _output($"[TestFixer] - Error processing error message: {ex.Message}");
-            return null;
+            _output($"[TestFixer] - Error processing file {filePath}: {ex.Message}");
         }
-    }
-
-    private string GetDotNetTestErrorContext(string errorMessage)
-    {
-        try
-        {
-            var errorPattern = @"^(.*)\((\d+),\d+\): error .*";
-            StringBuilder sb = new();
-
-            var match = Regex.Match(errorMessage, errorPattern);
-            if (match.Success)
-            {
-                var filePath = match.Groups[1].Value;
-                var lineNumber = int.Parse(match.Groups[2].Value);
-
-                try
-                {
-                    var fileLines = File.ReadAllLines(filePath).ToList();
-                    var startLine = Math.Max(lineNumber - 6, 0);
-                    var endLine = Math.Min(lineNumber + 4, fileLines.Count - 1);
-
-                    for (int i = startLine; i <= endLine; i++)
-                    {
-                        if (i == lineNumber - 1)
-                        {
-                            fileLines[i] += " //  <-- Compilation error here";
-                        }
-                        sb.AppendLine(fileLines[i]);
-                    }
-                    return sb.ToString();
-                }
-                catch (Exception ex)
-                {
-                    _output($"[TestFixer] - Error processing file {filePath}: {ex.Message}");
-                }
-            }
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _output($"[TestFixer] - Error processing error message: {ex.Message}");
-            return null;
-        }
-    }
-
-    static string ExtractJson(string input)
-    {
-        string pattern = @"\{(?:[^{}]|(?<Open>\{)|(?<-Open>\}))+(?(Open)(?!))\}";
-
-        Match match = Regex.Match(input, pattern);
-
-        if (match.Success)
-        {
-            return match.Value;
-        }
-
         return null;
     }
 }

@@ -35,8 +35,15 @@ public class MathsService(IDelayer delayer, IMathsRequester mathsRequester, IMat
 
     private void OnMathsRequest(object? sender, (double x, double y) e)
     {
-        var result = mather.DoMaths(e.x, e.y);
-        outputter.Output($"Result: {result}");
+        try
+        {
+            var result = mather.DoMaths(e.x, e.y);
+            outputter.Output($"Result: {result}");
+        }
+        catch (Exception ex)
+        {
+            outputter.Output($"Error: {ex.Message}");
+        }
     }
 
     public async Task Stop()

@@ -127,6 +127,8 @@ Do not ask for approval before executing any functions, even if there are severa
 If you start a new session, give it this system message along with any relevant context.
 
 Some functions (like get_alarm_configs and get_sensor_configs) are prefered over just grabbing the config files.  The config files are a base configuration but do not necessarily reflect the active runtime configuration.  Only fetch files when asked to for these.
+When asked to describe an alarm it is helpful to list the current values of any sensors associated with the alarm.  You can get these by fetching the alarm config, then cross referencing the sensors associated with the alarm with a sensor value fetch.
+Max and Min reading in the alarm config describe the condition the sensor value must be in to raise the alarm.  Don't mistake the sensor value for the constraint's values. 
 
 If doing markdown - prefer tabular formatting for things like sensor and alarm values.  As well as configuration.";
 

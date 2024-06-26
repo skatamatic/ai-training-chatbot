@@ -61,7 +61,7 @@ public partial class App : Application
         services.AddOpenAiChatFunction<WriteFileContentsSystemFunction>();
         services.AddOpenAiChatFunction<ExecutePowerShellScriptSystemFunction>();
 
-        /*services.AddSingleton<IMySqlService, MySqlService>();
+        services.AddSingleton<IMySqlService, MySqlService>();
         services.AddOpenAiChatFunction<MySqlQueryAPIFunction>();
         services.AddOpenAiChatFunction<MySqlNonQueryAPIFunction>();
 
@@ -69,15 +69,15 @@ public partial class App : Application
         services.AddOpenAiChatFunction<CSharpDefinitionsFunction>();
 
         services.AddSingleton<ITestRunnerService, UnityTestRunnerService>();
-        services.AddOpenAiChatFunction<TestRunnerFunction>();*/
+        services.AddOpenAiChatFunction<TestRunnerFunction>();
 
-        services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiService>();
+        /*services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiService>();
         services.AddOpenAiChatFunction<FetchKiwiFileFunction>();
         services.AddOpenAiChatFunction<GetKiwiAlarmsFunction>();
         services.AddOpenAiChatFunction<GetKiwiSensorValuesFunction>();
         services.AddOpenAiChatFunction<GetKiwiAlarmConfigsFunction>();
         services.AddOpenAiChatFunction<GetKiwiSensorConfigsFunction>();
-        services.AddSingleton<ISystemMessageProvider, MDT_API.KiwiSystemMessages>();
+        services.AddSingleton<ISystemMessageProvider, MDT_API.KiwiSystemMessages>();*/
 
         services.AddSingleton<FunctionInvocationObserver>();
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());

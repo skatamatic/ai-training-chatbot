@@ -40,118 +40,118 @@ public class UnitTestSorcerer : IUnitTestSorcerer
 
     public async Task<bool> GenerateAsync()
     {
-        UnitTestGenerationResult genResult = null;
-        string testFilePath;
-
-        if (!_config.SkipToEnhanceIfTestsExist || !_solutionTools.HasTestsAlready(_config.FileToTest, out string existingTestPath))
-        {
-
-            try
-            {
-                _output("Generating tests...");
-                genResult = await _generator.Generate(_config.FileToTest);
-                testFilePath = await _solutionTools.SaveTestFile(_config.FileToTest, genResult.AIResponse.TestFileContent);
-                _output($"Tests written to {testFilePath}");
-            }
-            catch (Exception ex)
-            {
-                _output($"Failed to generate tests: {ex.Message} AI Output: {genResult?.AIResponse?.TestFileContent}");
-                return false;
-            }
-
-            var testFileProject = _solutionTools.FindProjectFile(testFilePath);
-            TestRunResult runResult;
-            
-            try
-            {
-                _output("Running tests...");
-                runResult = await _runner.RunTestsAsync(testFileProject, Path.GetFileNameWithoutExtension(testFilePath));
-            }
-            catch (Exception ex)
-            {
-                _output($"Failed to run tests: {ex.Message}");
-                return false;
-            }
-
-            if (runResult?.Success != true)
-            {
-                bool testsFixed = await TryFixTestsAsync(genResult, testFilePath, testFileProject, _config.FileToTest, runResult);
-                if (!testsFixed)
-                {
-                    return false;
-                }
-            }
-        }
-        else
+        if (_config.SkipToEnhanceIfTestsExist && _solutionTools.HasTestsAlready(_config.FileToTest, out string existingTestPath))
         {
             _output($"Skipping generation - found existing tests at '{existingTestPath}'");
-            genResult = await _generator.AnalyzeOnly(_config.FileToTest);
-            testFilePath = existingTestPath;
+            return await EnhanceExistingTestsAsync(existingTestPath);
         }
 
-        if (_config.EnhancementPasses > 0)
+        var genResult = await GenerateTestsAsync(_config.FileToTest);
+        if (genResult == null)
         {
-            bool enhanced = await TryEnhanceTestsAsync(genResult.Analysis, _config.FileToTest, testFilePath);
-            if (!enhanced)
-            {
-                _output("Enhancements failed");
-                return false;
-            }
+            return false;
+        }
+
+        var testFilePath = await _solutionTools.SaveTestFile(_config.FileToTest, genResult.AIResponse.TestFileContent);
+        var testFileProject = _solutionTools.FindProjectFile(testFilePath);
+
+        if (!await EnsureTestsPassAsync(genResult, testFilePath, testFileProject, _config.FileToTest))
+        {
+            return false;
+        }
+
+        if (_config.EnhancementPasses > 0 && !await EnhanceTestsAsync(genResult.Analysis, _config.FileToTest, testFilePath))
+        {
+            _output("Enhancements failed");
+            return false;
         }
 
         _output("Done");
         return true;
     }
 
-    private async Task<bool> TryEnhanceTestsAsync(AnalysisResult analysis, string uutPath, string testFilePath)
+    private async Task<UnitTestGenerationResult> GenerateTestsAsync(string fileToTest)
+    {
+        try
+        {
+            _output("Generating tests...");
+            var genResult = await _generator.Generate(fileToTest);
+            _output("Tests generated successfully");
+            return genResult;
+        }
+        catch (Exception ex)
+        {
+            _output($"Failed to generate tests: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<bool> EnhanceExistingTestsAsync(string existingTestPath)
+    {
+        var analysisResult = await _generator.AnalyzeOnly(_config.FileToTest);
+        return await EnhanceTestsAsync(analysisResult.Analysis, _config.FileToTest, existingTestPath);
+    }
+
+    private async Task<bool> EnsureTestsPassAsync(UnitTestGenerationResult genResult, string testFilePath, string testFileProject, string uutPath)
+    {
+        var runResult = await RunTestsAsync(testFileProject, testFilePath);
+        if (runResult?.Success != true)
+        {
+            return await TryFixTestsAsync(genResult, testFilePath, testFileProject, uutPath, runResult);
+        }
+        return true;
+    }
+
+    private async Task<TestRunResult> RunTestsAsync(string testFileProject, string testFilePath)
+    {
+        try
+        {
+            _output("Running tests...");
+            return await _runner.RunTestsAsync(testFileProject, Path.GetFileNameWithoutExtension(testFilePath));
+        }
+        catch (Exception ex)
+        {
+            _output($"Failed to run tests: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<bool> EnhanceTestsAsync(AnalysisResult analysis, string uutPath, string testFilePath)
     {
         for (int i = 0; i < _config.EnhancementPasses; i++)
         {
             _output($"Enhancing tests (pass {i + 1}/{_config.EnhancementPasses})");
-            UnitTestGenerationResult result = null;
-
-            try
+            if (await EnhanceAndRunTestsAsync(analysis, uutPath, testFilePath))
             {
-                result = await _enhancer.Enhance(analysis, uutPath, testFilePath);
-                await _solutionTools.WriteSourceFile(testFilePath, result?.AIResponse?.TestFileContent);
-            }
-            catch (Exception ex)
-            {
-                _output($"Failed to enhance: {ex.Message}");
-                continue;
-            }
-
-            string testFileProject = _solutionTools.FindProjectFile(testFilePath);
-            TestRunResult runResult;
-
-            try
-            {
-                runResult = await _runner.RunTestsAsync(testFileProject, Path.GetFileNameWithoutExtension(testFilePath));
-            }
-            catch (Exception ex)
-            {
-                _output($"Failed to run tests: {ex.Message}");
-                continue;
-            }
-            
-
-            if (runResult.Success)
-            {
-                _output("Tests enhanced");
                 return true;
             }
+        }
+        return false;
+    }
 
-            if (!runResult.Success)
-            {
-                bool testsFixed = await TryFixTestsAsync(result, testFilePath, testFileProject, uutPath, runResult);
-                if (!testsFixed)
-                {
-                    return false;
-                }
-            }
+    private async Task<bool> EnhanceAndRunTestsAsync(AnalysisResult analysis, string uutPath, string testFilePath)
+    {
+        UnitTestGenerationResult result;
+        try
+        {
+            result = await _enhancer.Enhance(analysis, uutPath, testFilePath);
+            await _solutionTools.WriteSourceFile(testFilePath, result?.AIResponse?.TestFileContent);
+        }
+        catch (Exception ex)
+        {
+            _output($"Failed to enhance: {ex.Message}");
+            return false;
         }
 
-        return true;
+        var testFileProject = _solutionTools.FindProjectFile(testFilePath);
+        var runResult = await RunTestsAsync(testFileProject, testFilePath);
+        if (runResult?.Success == true)
+        {
+            _output("Tests enhanced");
+            return true;
+        }
+
+        return runResult?.Success == true || await TryFixTestsAsync(result, testFilePath, testFileProject, uutPath, runResult);
     }
 
     private async Task<bool> TryFixTestsAsync(UnitTestGenerationResult genResult, string testFilePath, string testFileProject, string uutPath, TestRunResult runResult)
@@ -164,7 +164,6 @@ public class UnitTestSorcerer : IUnitTestSorcerer
             try
             {
                 lastResult = await _fixer.Fix(new FixContext() { Attempt = i, LastGenerationResult = lastResult, LastTestRunResults = runResult }, testFilePath, uutPath);
-
                 await _solutionTools.WriteSourceFile(testFilePath, lastResult?.AIResponse?.TestFileContent);
                 _output($"Fixed tests written to {testFilePath}");
             }
@@ -173,19 +172,9 @@ public class UnitTestSorcerer : IUnitTestSorcerer
                 _output($"Failed to fix tests: {ex.Message}");
                 continue;
             }
-            
-            try
-            {
-                _output("Running fixed tests...");
-                runResult = await _runner.RunTestsAsync(testFileProject, Path.GetFileNameWithoutExtension(testFilePath));
-            }
-            catch (Exception ex)
-            {
-                _output($"Failed to run tests: {ex.Message}");
-                continue;
-            }
 
-            if (runResult.Success)
+            runResult = await RunTestsAsync(testFileProject, testFilePath);
+            if (runResult?.Success == true)
             {
                 _output("Success!");
                 return true;

@@ -9,16 +9,16 @@ var startRow = Console.CursorTop;
 
 Action<string> output = x =>
 {
-    //ClearConsoleRow(startRow);
-    //var col = Console.ForegroundColor;
-    //Console.ForegroundColor = ConsoleColor.DarkGray;
+    ClearConsoleRow(startRow);
+    var col = Console.ForegroundColor;
+    Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.Write(x);
     if (!x.EndsWith('\n'))
         Console.WriteLine();
-    //Console.ForegroundColor = col;
+    Console.ForegroundColor = col;
 };
 
-await Test_TestRunner();
+await Test_Defs();
 Console.ReadLine();
 
 async Task Test_TestRunner()
@@ -79,7 +79,7 @@ async Task Test_UnityTestRunner()
     }
 }
 
-async Task Test_TestGen()
+async Task Test_Defs()
 {
     const string FILENAME = "E:\\repos\\ai-training-chatbot\\src\\AI-Training-API\\App.xaml.cs";
     const int MAX_DEPTH = 2;

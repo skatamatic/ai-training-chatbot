@@ -56,7 +56,7 @@ public class DotNetUnitTestGenerator : IUnitTestGenerator
         string session = Guid.NewGuid().ToString();
         var response = await _api.Prompt(session, userPrompt);
 
-        var json = ExtractJson(response);
+        var json = Util.ExtractJsonFromCompletion(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
         _output($"Got response from OpenAI:\n{response}");
@@ -88,7 +88,8 @@ Here's all the context:
 You are an nunit unit test generation bot.  
 You are to take this csharp code as well as all the accompanying context and generate excellent quality and VERY COMPREHENSIVE unit tests for it.  Write as many tests as you can covering functionality and edge cases (but keep in mind your token limit of 4000 output tokens).
 
-NEVER test with real Task.Delay or Thread.Sleep.  Instead, use Task.Delay(1) or Task.Yield() or Task.CompletedTask in any mocks.
+NEVER test with real Task.Delay or Thread.Sleep.  Instead, use Task.Delay(1) or Task.Yield() or Task.CompletedTask in any mocks - or better yet use any relevant supplemental classes provided.
+ALWAYS use supplemental classes instead of moq'ing.
 Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
 NEVER test any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
 NEVER USE REFLECTION or any clever tricks in your tests.
@@ -142,19 +143,5 @@ Answer with the following json format.  Be mindful to escape it properly:
         Match match = Regex.Match(uut, pattern);
 
         return string.Empty;
-    }
-
-    public static string ExtractJson(string input)
-    {
-        string pattern = @"\{(?:[^{}]|(?<Open>\{)|(?<-Open>\}))+(?(Open)(?!))\}";
-
-        Match match = Regex.Match(input, pattern);
-
-        if (match.Success)
-        {
-            return match.Value;
-        }
-
-        return null;
     }
 }
