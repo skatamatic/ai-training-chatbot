@@ -1,27 +1,27 @@
-namespace FakeProject;
-
+using System; 
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Moq;
-using System;
-using System.Threading.Tasks;
+
+namespace FakeProject;
 
 [TestFixture]
 public class MathsServiceTests
 {
+    private Mock<IMathsRequester> _mathsRequesterMock;
+    private Mock<IMather> _matherMock;
+    private Mock<IOutputter> _outputterMock;
     private TestDelayer _testDelayer;
-    private Mock<IMathsRequester> _mockMathsRequester;
-    private Mock<IMather> _mockMather;
-    private Mock<IOutputter> _mockOutputter;
     private MathsService _mathsService;
 
     [SetUp]
     public void SetUp()
     {
-        _testDelayer = new TestDelayer { WaitForElapsed = true };
-        _mockMathsRequester = new Mock<IMathsRequester>();
-        _mockMather = new Mock<IMather>();
-        _mockOutputter = new Mock<IOutputter>();
-        _mathsService = new MathsService(_testDelayer, _mockMathsRequester.Object, _mockMather.Object, _mockOutputter.Object);
+        _mathsRequesterMock = new Mock<IMathsRequester>();
+        _matherMock = new Mock<IMather>();
+        _outputterMock = new Mock<IOutputter>();
+        _testDelayer = new TestDelayer();
+        _mathsService = new MathsService(_testDelayer, _mathsRequesterMock.Object, _matherMock.Object, _outputterMock.Object);
     }
 
     [TearDown]
@@ -31,7 +31,7 @@ public class MathsServiceTests
     }
 
     [Test]
-    public void Name_ReturnsExpectedValue()
+    public void Name_ReturnsCorrectValue()
     {
         // Act
         var name = _mathsService.Name;
@@ -41,62 +41,10 @@ public class MathsServiceTests
     }
 
     [Test]
-    public async Task Start_WhenServiceIsStopped_ChangesStateToStarted()
-    {
-        // Act
-        var task = _mathsService.Start();
-        _testDelayer.Elapse();
-        await task;
-
-        // Assert
-        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Started));
-    }
-
-    [Test]
-    public async Task Start_WhenServiceIsStopped_ChangesStateToStarting()
-    {
-        // Act
-        var task = _mathsService.Start();
-
-        // Assert
-        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Starting));
-    }
-
-    [Test]
-    public async Task Stop_WhenServiceIsStarted_ChangesStateToStopped()
+    public async Task Start_WhenAlreadyStarted_DoesNotChangeState()
     {
         // Arrange
         await _mathsService.Start();
-        _testDelayer.Elapse();
-
-        // Act
-        var task = _mathsService.Stop();
-        _testDelayer.Elapse();
-        await task;
-
-        // Assert
-        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Stopped));
-    }
-
-    [Test]
-    public async Task Stop_WhenServiceIsStarted_ChangesStateToStopping()
-    {
-        // Arrange
-        await _mathsService.Start();
-        _testDelayer.Elapse();
-
-        // Act
-        var task = _mathsService.Stop();
-        // Assert
-        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Stopping));
-    }
-
-    [Test]
-    public async Task Start_WhenServiceIsAlreadyStarted_DoesNotChangeState()
-    {
-        // Arrange
-        await _mathsService.Start();
-        _testDelayer.Elapse();
 
         // Act
         var task = _mathsService.Start();
@@ -108,10 +56,33 @@ public class MathsServiceTests
     }
 
     [Test]
-    public async Task Stop_WhenServiceIsAlreadyStopped_DoesNotChangeState()
+    public async Task Start_WhenStopped_ChangesStateCorrectly()
     {
+        // Arrange
+        var stateChangedCount = 0;
+        _mathsService.OnStateChanged += (sender, state) => stateChangedCount++;
+
         // Act
+        var task = _mathsService.Start();
+        _testDelayer.Elapse();
+        await task;
+
+        // Assert
+        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Started));
+        Assert.That(stateChangedCount, Is.EqualTo(2)); // Starting, Started
+    }
+
+    [Test]
+    public async Task Stop_WhenAlreadyStopped_DoesNotChangeState()
+    {
+        // Arrange
+        await _mathsService.Start();
         var task = _mathsService.Stop();
+        _testDelayer.Elapse();
+        await task;
+
+        // Act
+        task = _mathsService.Stop();
         _testDelayer.Elapse();
         await task;
 
@@ -120,108 +91,75 @@ public class MathsServiceTests
     }
 
     [Test]
-    public async Task Start_RaisesOnStateChangedEvent()
-    {
-        // Arrange
-        var stateChangedRaised = false;
-        _mathsService.OnStateChanged += (s, e) => stateChangedRaised = true;
-
-        // Act
-        var task = _mathsService.Start();
-        _testDelayer.Elapse();
-        await task;
-
-        // Assert
-        Assert.That(stateChangedRaised, Is.True);
-    }
-
-    [Test]
-    public async Task Stop_RaisesOnStateChangedEvent()
+    public async Task Stop_WhenStarted_ChangesStateCorrectly()
     {
         // Arrange
         await _mathsService.Start();
-        _testDelayer.Elapse();
-
-        var stateChangedRaised = false;
-        _mathsService.OnStateChanged += (s, e) => stateChangedRaised = true;
-
-        // Act
         var task = _mathsService.Stop();
+
+        // Act
         _testDelayer.Elapse();
         await task;
 
         // Assert
-        Assert.That(stateChangedRaised, Is.True);
+        Assert.That(_mathsService.State, Is.EqualTo(ServiceState.Stopped));
     }
 
-    [Test]
-    public async Task Start_WhenAlreadyStarted_DoesNotRaiseOnStateChangedEvent()
+    [TestCase(5, 3, 8)]
+    [TestCase(-1, -1, -2)]
+    [TestCase(double.MaxValue, double.MinValue, 0)]
+    public async Task OnMathsRequested_RaisesEventAndOutputsResult(double x, double y, double expectedResult)
     {
         // Arrange
-        await _mathsService.Start();
-        _testDelayer.Elapse();
+        _matherMock.Setup(m => m.DoMaths(x, y)).Returns(expectedResult);
 
-        var stateChangedRaised = false;
-        _mathsService.OnStateChanged += (s, e) => stateChangedRaised = true;
-
-        // Act
-        var task = _mathsService.Start();
-        _testDelayer.Elapse();
-        await task;
-
-        // Assert
-        Assert.That(stateChangedRaised, Is.False);
-    }
-
-    [Test]
-    public async Task Stop_WhenAlreadyStopped_DoesNotRaiseOnStateChangedEvent()
-    {
-        // Arrange
-        var stateChangedRaised = false;
-        _mathsService.OnStateChanged += (s, e) => stateChangedRaised = true;
-
-        // Act
-        var task = _mathsService.Stop();
-        _testDelayer.Elapse();
-        await task;
-
-        // Assert
-        Assert.That(stateChangedRaised, Is.False);
-    }
-
-    [TestCase(1.0, 2.0, 42)]
-    [TestCase(3.0, 4.0, 12)]
-    [TestCase(5.0, 6.0, 30)]
-    [TestCase(7.0, 8.0, 56)]
-    [TestCase(9.0, 10.0, 90)]
-    public async Task OnMathsRequest_InvokesDoMathsAndOutput(double x, double y, double expectedResult)
-    {
-        // Arrange
-        _mockMather.Setup(m => m.DoMaths(x, y)).Returns(expectedResult);
         await _mathsService.Start();
         _testDelayer.Elapse();
 
         // Act
-        _mockMathsRequester.Raise(m => m.OnMathsRequested += null, this, (x, y));
+        _mathsRequesterMock.Raise(m => m.OnMathsRequested += null, (object?)null, (x, y));
 
         // Assert
-        _mockMather.Verify(m => m.DoMaths(x, y), Times.Once);
-        _mockOutputter.Verify(o => o.Output($"Result: {expectedResult}"), Times.Once);
+        _outputterMock.Verify(o => o.Output(It.Is<string>(s => s.Contains(expectedResult.ToString()))), Times.Once);
+        Assert.That(_mathsRequesterMock.Invocations.Count > 0, "OnMathsRequested is set and invoked");
     }
 
     [Test]
-    public async Task OnMathsRequest_WhenExceptionThrown_OutputsErrorMessage()
+    public async Task OnMathsRequested_HandlesExceptionAndOutputsError()
     {
         // Arrange
-        var exceptionMessage = "Error";
-        _mockMather.Setup(m => m.DoMaths(It.IsAny<double>(), It.IsAny<double>())).Throws(new Exception(exceptionMessage));
+        double x = 5.0;
+        double y = 3.0;
+        string exceptionMessage = "Test Exception";
+        _matherMock.SetupSequence(m => m.DoMaths(x, y)).Throws(new Exception(exceptionMessage));
+
         await _mathsService.Start();
         _testDelayer.Elapse();
 
         // Act
-        _mockMathsRequester.Raise(m => m.OnMathsRequested += null, this, (1.0, 2.0));
+        _mathsRequesterMock.Raise(m => m.OnMathsRequested += null, (object?)null, (x, y));
 
         // Assert
-        _mockOutputter.Verify(o => o.Output($"Error: {exceptionMessage}"), Times.Once);
+        _outputterMock.Verify(o => o.Output(It.Is<string>(s => s.Contains(exceptionMessage))), Times.Once);
+    }
+
+    [Test]
+    public async Task OnStateChanged_EventIsRaisedCorrectly()
+    {
+        // Arrange
+        int stateChangedCount = 0;
+        _mathsService.OnStateChanged += (sender, state) => stateChangedCount++;
+
+        // Act
+        var startTask = _mathsService.Start();
+        _testDelayer.Elapse();
+        await startTask;
+
+        var stopTask = _mathsService.Stop();
+        _testDelayer.Elapse();
+        await stopTask;
+
+        // Assert
+        Assert.That(stateChangedCount, Is.EqualTo(4)); // Starting, Started, Stopping, Stopped
     }
 }

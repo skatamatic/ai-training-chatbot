@@ -71,6 +71,8 @@ public partial class App : Application
         services.AddSingleton<ITestRunnerService, UnityTestRunnerService>();
         services.AddOpenAiChatFunction<TestRunnerFunction>();
 
+        services.AddOpenAiChatFunction<NCalcFunction>();
+
         /*services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiService>();
         services.AddOpenAiChatFunction<FetchKiwiFileFunction>();
         services.AddOpenAiChatFunction<GetKiwiAlarmsFunction>();

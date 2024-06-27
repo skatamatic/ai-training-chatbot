@@ -1,40 +1,30 @@
 ﻿using CSharpTools.DefinitionAnalyzer;
 using CSharpTools.SolutionTools;
 using CSharpTools.TestRunner;
+using Shared;
+using UnitTestGenerator.Interface;
+using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator;
+namespace UnitTestGenerator.Services;
 
-public class UnitTestSorcererConfig
-{
-    public int MaxFixAttempts { get; set; } = 3;
-    public int EnhancementPasses { get; set; } = 2;
-    public string FileToTest { get; set; }
-    public bool SkipToEnhanceIfTestsExist { get; set; } = false;
-}
-
-public interface IUnitTestSorcerer
-{
-    Task<bool> GenerateAsync();
-}
-
-public class UnitTestSorcerer : IUnitTestSorcerer
+public class UnitTestSorcerer : IUnitTestSorcerer, IOutputter
 {
     private readonly IUnitTestFixer _fixer;
     private readonly IUnitTestGenerator _generator;
     private readonly IUnitTestRunner _runner;
     private readonly IUnitTestEnhancer _enhancer;
     private readonly ISolutionTools _solutionTools;
-    private readonly Action<string> _output;
     private readonly UnitTestSorcererConfig _config;
 
-    public UnitTestSorcerer(UnitTestSorcererConfig config, IUnitTestFixer fixer, IUnitTestGenerator generator, IUnitTestRunner runner, ISolutionTools solutionTools, IUnitTestEnhancer enhancer, Action<string> output)
+    public event EventHandler<string> OnOutput;
+
+    public UnitTestSorcerer(UnitTestSorcererConfig config, IUnitTestFixer fixer, IUnitTestGenerator generator, IUnitTestRunner runner, IUnitTestEnhancer enhancer, ISolutionTools solutionTools)
     {
         _fixer = fixer;
         _generator = generator;
         _runner = runner;
         _solutionTools = solutionTools;
         _enhancer = enhancer;
-        _output = output;
         _config = config;
     }
 
@@ -42,7 +32,7 @@ public class UnitTestSorcerer : IUnitTestSorcerer
     {
         if (_config.SkipToEnhanceIfTestsExist && _solutionTools.HasTestsAlready(_config.FileToTest, out string existingTestPath))
         {
-            _output($"Skipping generation - found existing tests at '{existingTestPath}'");
+            OnOutput?.Invoke(this, $"Skipping generation - found existing tests at '{existingTestPath}'");
             return await EnhanceExistingTestsAsync(existingTestPath);
         }
 
@@ -62,11 +52,11 @@ public class UnitTestSorcerer : IUnitTestSorcerer
 
         if (_config.EnhancementPasses > 0 && !await EnhanceTestsAsync(genResult.Analysis, _config.FileToTest, testFilePath))
         {
-            _output("Enhancements failed");
+            OnOutput?.Invoke(this, "Enhancements failed");
             return false;
         }
 
-        _output("Done");
+        OnOutput?.Invoke(this, "Done");
         return true;
     }
 
@@ -74,14 +64,14 @@ public class UnitTestSorcerer : IUnitTestSorcerer
     {
         try
         {
-            _output("Generating tests...");
+            OnOutput?.Invoke(this, "Generating tests...");
             var genResult = await _generator.Generate(fileToTest);
-            _output("Tests generated successfully");
+            OnOutput?.Invoke(this, "Tests generated successfully");
             return genResult;
         }
         catch (Exception ex)
         {
-            _output($"Failed to generate tests: {ex.Message}");
+            OnOutput?.Invoke(this, $"Failed to generate tests: {ex.Message}");
             return null;
         }
     }
@@ -106,12 +96,12 @@ public class UnitTestSorcerer : IUnitTestSorcerer
     {
         try
         {
-            _output("Running tests...");
+            OnOutput?.Invoke(this, "Running tests...");
             return await _runner.RunTestsAsync(testFileProject, Path.GetFileNameWithoutExtension(testFilePath));
         }
         catch (Exception ex)
         {
-            _output($"Failed to run tests: {ex.Message}");
+            OnOutput?.Invoke(this, $"Failed to run tests: {ex.Message}");
             return null;
         }
     }
@@ -120,13 +110,14 @@ public class UnitTestSorcerer : IUnitTestSorcerer
     {
         for (int i = 0; i < _config.EnhancementPasses; i++)
         {
-            _output($"Enhancing tests (pass {i + 1}/{_config.EnhancementPasses})");
-            if (await EnhanceAndRunTestsAsync(analysis, uutPath, testFilePath))
+            OnOutput?.Invoke(this, $"Enhancing tests (pass {i + 1}/{_config.EnhancementPasses})");
+            bool enhanced = await EnhanceAndRunTestsAsync(analysis, uutPath, testFilePath);
+            if (!enhanced)
             {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     private async Task<bool> EnhanceAndRunTestsAsync(AnalysisResult analysis, string uutPath, string testFilePath)
@@ -139,7 +130,7 @@ public class UnitTestSorcerer : IUnitTestSorcerer
         }
         catch (Exception ex)
         {
-            _output($"Failed to enhance: {ex.Message}");
+            OnOutput?.Invoke(this, $"Failed to enhance: {ex.Message}");
             return false;
         }
 
@@ -147,7 +138,7 @@ public class UnitTestSorcerer : IUnitTestSorcerer
         var runResult = await RunTestsAsync(testFileProject, testFilePath);
         if (runResult?.Success == true)
         {
-            _output("Tests enhanced");
+            OnOutput?.Invoke(this, "Tests enhanced");
             return true;
         }
 
@@ -160,32 +151,32 @@ public class UnitTestSorcerer : IUnitTestSorcerer
 
         for (int i = 0; i < _config.MaxFixAttempts; i++)
         {
-            _output($"Failed... Attempting to fix ({i + 1}/{_config.MaxFixAttempts})");
+            OnOutput?.Invoke(this, $"Failed... Attempting to fix ({i + 1}/{_config.MaxFixAttempts})");
             try
             {
                 lastResult = await _fixer.Fix(new FixContext() { Attempt = i, LastGenerationResult = lastResult, LastTestRunResults = runResult }, testFilePath, uutPath);
                 await _solutionTools.WriteSourceFile(testFilePath, lastResult?.AIResponse?.TestFileContent);
-                _output($"Fixed tests written to {testFilePath}");
+                OnOutput?.Invoke(this, $"Fixed tests written to {testFilePath}");
             }
             catch (Exception ex)
             {
-                _output($"Failed to fix tests: {ex.Message}");
+                OnOutput?.Invoke(this, $"Failed to fix tests: {ex.Message}");
                 continue;
             }
 
             runResult = await RunTestsAsync(testFileProject, testFilePath);
             if (runResult?.Success == true)
             {
-                _output("Success!");
+                OnOutput?.Invoke(this, "Success!");
                 return true;
             }
             else
             {
-                _output($"Test run failed: Errors: {runResult?.Errors?.Count} BuildIssues: {runResult?.BuildErrors?.Count} Failures: {runResult?.FailedTests?.Count} Passed: {runResult?.PassedTests?.Count}");
+                OnOutput?.Invoke(this, $"Test run failed: Errors: {runResult?.Errors?.Count} BuildIssues: {runResult?.BuildErrors?.Count} Failures: {runResult?.FailedTests?.Count} Passed: {runResult?.PassedTests?.Count}");
             }
         }
 
-        _output("Failed to fix tests after max attempts.");
+        OnOutput?.Invoke(this, "Failed to fix tests after max attempts.");
         return false;
     }
 }

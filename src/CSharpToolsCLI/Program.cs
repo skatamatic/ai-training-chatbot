@@ -25,7 +25,8 @@ async Task Test_TestRunner()
 {
     const string TEST_PROJECT = "E:\\repos\\MobileHMI\\MDT.Framework\\DataServices.Tests\\DataServices.NUnit.Tests.csproj";
 
-    using var runner = new NUnitTestRunner(output);
+    using var runner = new NUnitTestRunner();
+    runner.OnOutput += (_, x) => output(x);
     var result = await runner.RunTestsAsync(TEST_PROJECT, "FracAuto");
 
     Console.WriteLine();
@@ -55,33 +56,40 @@ async Task Test_TestRunner()
 
 async Task Test_UnityTestRunner()
 {
-    var runner = new UnityTestRunner(output);
-    var result = await runner.RunTests("D:\\Repos\\worklink-app", UnityTestRunner.BuildSuiteFilter("TrackingCoordinator"));
+    const string TEST_PROJECT = "E:\\repos\\MobileHMI\\MDT.Framework\\DataServices.Tests\\DataServices.NUnit.Tests.csproj";
 
-    if (!string.IsNullOrEmpty(result.Error))
+    var runner = new UnityTestRunner();
+    runner.OnOutput += (_, x) => output(x);
+    var result = await runner.RunTestsAsync(TEST_PROJECT, "FracAuto");
+
+    Console.WriteLine();
+
+    while (true)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Error: {result.Error}");
-        Console.ForegroundColor = startCol;
-        return;
-    }
+        if (result.BuildErrors.Any())
+        {
+            Console.WriteLine($"Build failed (s):\n{string.Join('\n', result.BuildErrors)}");
+        }
+        else if (result.Errors.Any())
+        {
+            Console.WriteLine($"Finished with error(s):\n{string.Join('\n', result.Errors)}");
+        }
+        else
+        {
+            Console.WriteLine($"Passed: {result.PassedTests.Count} Failed: {result.FailedTests.Count}");
+        }
 
-    Console.WriteLine($"\nAll Passed: {result.AllPassed}");
-    Console.WriteLine($"Total: {result.TestResults.Count}");
-    Console.WriteLine($"Failures: {result.TestResults.Count(x=> !x.Success)}");
+        if (!result.FailedTests.Any())
+            break;
 
-    foreach (var failure in result.TestResults.Where(x => !x.Success))
-    {
-        Console.WriteLine($"Test: {failure.TestName} Class: {failure.ClassName} Info: {failure.Info}");
-        Console.WriteLine(failure.Failure);
-        Console.WriteLine(failure.Log);
-        Console.WriteLine();
+        Console.WriteLine("Re-running failed tests");
+        result = await runner.RunFailuresAsync(TEST_PROJECT, result);
     }
 }
 
 async Task Test_Defs()
 {
-    const string FILENAME = "E:\\repos\\ai-training-chatbot\\src\\AI-Training-API\\App.xaml.cs";
+    const string FILENAME = "D:\\Repos\\worklink-app\\Assets\\ScopeAR\\Core\\Logging\\DefaultAirbrakeFilters.cs";
     const int MAX_DEPTH = 2;
 
     Console.WriteLine($"Loading file '{FILENAME}', max depth: {MAX_DEPTH}");

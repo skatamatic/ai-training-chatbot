@@ -18,7 +18,8 @@ public class UnityTestRunnerService : ITestRunnerService
 
     public UnityTestRunnerService()
     {
-        _runner = new UnityTestRunner(Emit);
+        _runner = new UnityTestRunner();
+        _runner.OnOutput += (_, x) => Emit(x);
     }
 
     private void Emit(string output)
@@ -41,16 +42,7 @@ public class UnityTestRunnerService : ITestRunnerService
                 filter = UnityTestRunner.BuildSuiteFilter(request.TestSuiteFilter);
             }
 
-            var result = await _runner.RunTests(request.ProjectPath, filter);
-
-            if (result.AllPassed)
-            {
-                result.TestResults.Clear();
-            }
-            else
-            {
-                result.TestResults = result.TestResults.Where(r => !r.Success).ToList();
-            }
+            var result = await _runner.RunTestsAsync(request.ProjectPath, filter);
 
             var settings = new JsonSerializerSettings
             {

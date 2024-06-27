@@ -3,31 +3,23 @@ using Newtonsoft.Json;
 using Shared;
 using System.Text;
 using System.Text.RegularExpressions;
+using UnitTestGenerator.Interface;
+using UnitTestGenerator.Internal;
+using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator;
+namespace UnitTestGenerator.Services;
 
-public interface IUnitTestFixer
-{
-    Task<UnitTestGenerationResult> Fix(FixContext context, string testFilePath, string uutPath);
-}
-
-public class FixContext
-{
-    public int Attempt { get; set; }
-    public TestRunResult LastTestRunResults { get; set; }
-    public UnitTestGenerationResult LastGenerationResult { get; set; }
-}
-
-public class UnitTestFixer : IUnitTestFixer
+public class UnitTestFixer : IUnitTestFixer, IOutputter
 {
     IOpenAIAPI _api;
+    private readonly GenerationConfig _config;
 
-    Action<string> _output;
+    public event EventHandler<string> OnOutput;
 
-    public UnitTestFixer(IOpenAIAPI api, Action<string> output)
+    public UnitTestFixer(GenerationConfig genConfig, IOpenAIAPI api)
     {
         _api = api;
-        _output = output;
+        _config = genConfig;
     }
 
     public async Task<UnitTestGenerationResult> Fix(FixContext context, string testFilePath, string uutPath)
@@ -37,7 +29,7 @@ public class UnitTestFixer : IUnitTestFixer
 
         string userPrompt = BuildUserPrompt(context);
 
-        _output($"[TestFixer] - Prompting OpenAI with the following prompt:\n{userPrompt}");
+        OnOutput?.Invoke(this, $"Prompting OpenAI with the following prompt:\n{userPrompt}");
 
         _api.SystemPrompt = BuildSystemPrompt();
         var response = await _api.Prompt(context.LastGenerationResult.ChatSession, userPrompt);
@@ -45,7 +37,7 @@ public class UnitTestFixer : IUnitTestFixer
         var json = Util.ExtractJsonFromCompletion(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
-        _output($"[TestFixer] - Got response from OpenAI:\n{JsonConvert.SerializeObject(testDto, Formatting.Indented)}");
+        OnOutput?.Invoke(this, $"Got response from OpenAI:\n{JsonConvert.SerializeObject(testDto, Formatting.Indented)}");
 
         if (string.IsNullOrEmpty(testDto.TestFileContent))
         {
@@ -89,10 +81,8 @@ If you can't fix test(s) after 3 consecutive attempts, consider them unfixable a
 Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
 Do not include any explanatory comments for any fixes you made that do not otherwise improve the code quality.
 
-Pay close attention when trying to moq method calls with optional parameters.  If this happens, you must just add the appropriate It.IsAny<> calls to the method call.  Do not try to remove the optional parameters from the method call.
-NEVER test any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
-NEVER USE REFLECTION or any clever tricks in your tests.
-Use nunit, nsubstitute, Assert.That, and Assert/Act/Arrange with comments indicating Assert/Act/Arrange poritons.  You can do Act/Assert/Act/Assert after if it makes sense to, but only do 1 arrange.
+{CommonPrompts.CommonTestGuidelines}
+{_config.StylePrompt}
 
 Answer with the following json format.  Be mindful to escape it properly:
 {{{{
@@ -109,7 +99,7 @@ Answer with the following json format.  Be mindful to escape it properly:
     private string BuildIssuesPrompt(TestRunResult testRun)
     {
         StringBuilder sb = new();
-        
+
         foreach (var error in testRun.BuildErrors)
         {
             var context = GetCompilationErrorContext(error);
@@ -175,7 +165,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         }
         catch (Exception ex)
         {
-            _output($"[TestFixer] - Error processing context from message: {ex.Message}");
+            OnOutput?.Invoke(this, $"[TestFixer] - Error processing context from message: {ex.Message}");
         }
         return null;
     }
@@ -185,11 +175,11 @@ Answer with the following json format.  Be mindful to escape it properly:
         try
         {
             var fileLines = File.ReadAllLines(filePath).ToList();
-            var startLine = Math.Max(lineNumber - 6, 0);
-            var endLine = Math.Min(lineNumber + 4, fileLines.Count - 1);
+            var startLine = Math.Max(lineNumber - _config.IssueContextLineCount, 0);
+            var endLine = Math.Min(lineNumber + _config.IssueContextLineCount, fileLines.Count - 1);
             StringBuilder sb = new();
 
-            _output($"[TestFixer] - Fetching lines {startLine + 1} to {endLine + 1} from {filePath}:");
+            OnOutput?.Invoke(this, $"[TestFixer] - Fetching lines {startLine + 1} to {endLine + 1} from {filePath}:");
             for (int i = startLine; i <= endLine; i++)
             {
                 if (i == lineNumber - 1)
@@ -202,7 +192,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         }
         catch (Exception ex)
         {
-            _output($"[TestFixer] - Error processing file {filePath}: {ex.Message}");
+            OnOutput?.Invoke(this, $"[TestFixer] - Error processing file {filePath}: {ex.Message}");
         }
         return null;
     }

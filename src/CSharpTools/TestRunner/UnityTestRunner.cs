@@ -1,16 +1,62 @@
-﻿using System.Diagnostics;
+﻿using Shared;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace CSharpTools.TestRunner;
 
-public partial class UnityTestRunner
+public partial class UnityTestRunner : IUnitTestRunner, IOutputter
 {
-    private readonly Action<string> output;
+    public event EventHandler<string> OnOutput;
 
-    public UnityTestRunner(Action<string> output)
+    public UnityTestRunner()
     {
-        this.output = output;
+    }
+
+    public async Task<TestRunResult> RunTestsAsync(string projectPath, string testFilter = null)
+    {
+        var unityTestResults = await RunTests(projectPath, testFilter);
+        return ConvertToTestRunResult(unityTestResults);
+    }
+
+    public async Task<TestRunResult> RunFailuresAsync(string projectPath, TestRunResult previousRunResult)
+    {
+        var failedTests = previousRunResult.FailedTests.Select(test => test.FullName).ToArray();
+        var filter = BuildMultiTestFilter(failedTests);
+        var unityTestResults = await RunTests(projectPath, filter);
+        return ConvertToTestRunResult(unityTestResults);
+    }
+
+    private TestRunResult ConvertToTestRunResult(UnityTestResults unityTestResults)
+    {
+        var testRunResult = new TestRunResult();
+
+        if (!string.IsNullOrEmpty(unityTestResults.Error))
+        {
+            testRunResult.Errors.Add(unityTestResults.Error);
+        }
+
+        foreach (var unityTest in unityTestResults.TestResults)
+        {
+            var testCaseResult = new TestCaseResult
+            {
+                FullName = unityTest.TestName,
+                Result = unityTest.Success ? "Passed" : "Failed",
+                Message = unityTest.Failure,
+                StackTrace = unityTest.Log
+            };
+
+            if (unityTest.Success)
+            {
+                testRunResult.PassedTests.Add(testCaseResult);
+            }
+            else
+            {
+                testRunResult.FailedTests.Add(testCaseResult);
+            }
+        }
+
+        return testRunResult;
     }
 
     public static string BuildMultiTestFilter(string[] tests)
@@ -23,14 +69,14 @@ public partial class UnityTestRunner
         return $".*{testFixture}.*";
     }
 
-    public async Task<UnityTestResults> RunTests(string projectPath, string filter = null)
+    async Task<UnityTestResults> RunTests(string projectPath, string filter = null)
     {
         var result = new UnityTestResults();
 
         string unityPath = GetUnityPath(projectPath);
         if (unityPath == null)
         {
-            output("Unable to find Unity installation.");
+            OnOutput?.Invoke(this, "Unable to find Unity installation.");
             result.Error = "Unity installation not found.";
             return result;
         }
@@ -52,7 +98,7 @@ public partial class UnityTestRunner
             runTestsCommand += $" -testFilter {filter}";
         }
 
-        output("Running Unity tests (this can take a while)...");
+        OnOutput?.Invoke(this, "Running Unity tests (this can take a while)...");
         bool success = await RunUnityCommandAsync(unityPath, runTestsCommand, tempRedirectedLogPath);
 
         if (File.Exists(testResultsPath))
@@ -80,7 +126,7 @@ public partial class UnityTestRunner
                 }
                 catch (Exception)
                 {
-                    //Try to get around unity holindg locks too aggressively
+                    //Try to get around unity holding locks too aggressively
                     await ForceKillUnity();
                     await Task.Delay(500);
                 }
@@ -118,12 +164,12 @@ public partial class UnityTestRunner
         results.AllPassed = results.TestResults.All(x => x.Success);
     }
 
-    static string GetUnityPath(string projectPath)
+    string GetUnityPath(string projectPath)
     {
         string versionFilePath = Path.Combine(projectPath, "ProjectSettings", "ProjectVersion.txt");
         if (!File.Exists(versionFilePath))
         {
-            Console.WriteLine("ProjectVersion.txt not found.");
+            OnOutput?.Invoke(this, "ProjectVersion.txt not found.");
             return null;
         }
 
@@ -132,7 +178,7 @@ public partial class UnityTestRunner
 
         if (unityVersion == null)
         {
-            Console.WriteLine("Failed to parse Unity version.");
+            OnOutput?.Invoke(this, "Failed to parse Unity version.");
             return null;
         }
 
@@ -241,7 +287,7 @@ public partial class UnityTestRunner
                 }
                 catch (Exception)
                 {
-                    //Try to get around unity holindg locks too aggressively
+                    //Try to get around unity holding locks too aggressively
                     await Task.Delay(500);
                 }
             }

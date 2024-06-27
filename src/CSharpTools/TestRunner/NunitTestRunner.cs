@@ -2,23 +2,18 @@
 using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
+using Shared;
 
 namespace CSharpTools.TestRunner;
 
-public interface IUnitTestRunner
+public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
 {
-    Task<TestRunResult> RunTestsAsync(string projectPath, string testFilter = null);
-    Task<TestRunResult> RunFailuresAsync(string projectPath, TestRunResult previousRunResult);
-}
-
-public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
-{
-    private readonly Action<string> _output;
     private Workspace _workspace;
 
-    public NUnitTestRunner(Action<string> output)
+    public event EventHandler<string> OnOutput;
+
+    public NUnitTestRunner()
     {
-        _output = output;
     }
 
     public void Dispose()
@@ -53,7 +48,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
             };
         }
 
-        _output($"Number of tests to run: {testCount}");
+        OnOutput?.Invoke(this, $"Number of tests to run: {testCount}");
 
         // Run dotnet test
         return await RunDotNetTestAsync(projectPath, testFilter);
@@ -82,12 +77,12 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
 
         if (failedTests.Count > 0)
         {
-            _output($"Number of failed tests to rerun: {failedTests.Count}");
+            OnOutput?.Invoke(this, $"Number of failed tests to rerun: {failedTests.Count}");
             return await RunDotNetTestAsync(projectPath, testFilter);
         }
         else
         {
-            _output("No failed tests to rerun.");
+            OnOutput?.Invoke(this, "No failed tests to rerun.");
             return new TestRunResult();
         }
     }
@@ -104,8 +99,8 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
 
         if (processResult.ExitCode != 0)
         {
-            _output("Failed to list tests.");
-            processResult.Output.ForEach(_output);
+            OnOutput?.Invoke(this, "Failed to list tests.");
+            processResult.Output.ForEach(x => OnOutput?.Invoke(this, x));
             return (-1, processResult.Output.Where(x=>x.ToLower().Contains("error")).ToList());
         }
 
@@ -118,7 +113,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
 
     async Task<Compilation> GetCompilation(string path)
     {
-        var progress = new Progress(_output);
+        var progress = new Progress(x => OnOutput?.Invoke(this, x));
         var workspace = MSBuildWorkspace.Create();
         var project = await workspace.OpenProjectAsync(path, progress, progress);
         
@@ -271,27 +266,4 @@ public partial class NUnitTestRunner : IUnitTestRunner, IDisposable
 
         return results;
     }
-}
-
-public class TestRunResult
-{
-    public List<string> BuildErrors { get; set; } = new List<string>();
-    public List<string> Errors { get; set; } = new List<string>();
-    public List<TestCaseResult> PassedTests { get; set; } = new List<TestCaseResult>();
-    public List<TestCaseResult> FailedTests { get; set; } = new List<TestCaseResult>();
-    public bool Success => PassedTests.Count > 0 && FailedTests.Count == 0 && BuildErrors.Count == 0;
-}
-
-public class TestCaseResult
-{
-    public string FullName { get; set; }
-    public string Result { get; set; }
-    public string Message { get; set; }
-    public string StackTrace { get; set; }
-}
-
-public class ProcessResult
-{
-    public int ExitCode { get; set; }
-    public List<string> Output { get; set; }
 }

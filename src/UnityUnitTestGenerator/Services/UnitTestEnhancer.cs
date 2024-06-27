@@ -2,25 +2,22 @@
 using Newtonsoft.Json;
 using Shared;
 using System.Text;
-using System.Text.RegularExpressions;
+using UnitTestGenerator.Interface;
+using UnitTestGenerator.Internal;
+using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator;
+namespace UnitTestGenerator.Services;
 
-public interface IUnitTestEnhancer
-{
-    Task<UnitTestGenerationResult> Enhance(AnalysisResult analysis, string uutPath, string testFilePath);
-}
-
-public class UnitTestEnhancer : IUnitTestEnhancer
+public class UnitTestEnhancer : IUnitTestEnhancer, IOutputter
 {
     private const int MaxRetries = 3;
     private readonly IOpenAIAPI _api;
-    private readonly Action<string> _output;
 
-    public UnitTestEnhancer(IOpenAIAPI api, Action<string> output)
+    public event EventHandler<string> OnOutput;
+
+    public UnitTestEnhancer(IOpenAIAPI api)
     {
         _api = api;
-        _output = output;
     }
 
     public async Task<UnitTestGenerationResult> Enhance(AnalysisResult analysis, string uutPath, string testFilePath)
@@ -31,7 +28,7 @@ public class UnitTestEnhancer : IUnitTestEnhancer
         string analysisPrompt = BuildContext(analysis);
         string userPrompt = BuildUserPrompt(analysisPrompt, uutContent, currentTests);
 
-        _output($"[UnitTestEnhancer] - Prompting OpenAI with the following prompt:\n{userPrompt}");
+        OnOutput?.Invoke(this, $"Prompting OpenAI with the following prompt:\n{userPrompt}");
 
         _api.SystemPrompt = BuildSystemPrompt();
         var session = Guid.NewGuid().ToString();
@@ -43,16 +40,16 @@ public class UnitTestEnhancer : IUnitTestEnhancer
             try
             {
                 var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
-                _output($"[UnitTestEnhancer] - Got response from OpenAI:\n{JsonConvert.SerializeObject(testDto, Formatting.Indented)}");
+                OnOutput?.Invoke(this, $"Got response from OpenAI:\n{JsonConvert.SerializeObject(testDto, Formatting.Indented)}");
                 return new UnitTestGenerationResult() { Analysis = analysis, AIResponse = testDto, ChatSession = session };
             }
             catch (Exception ex)
             {
-                _output($"[UnitTestEnhancer] - Error deserializing response from OpenAI: {ex.Message}. Attempt {attempt + 1}/{MaxRetries}. Json: {json}");
+                OnOutput?.Invoke(this, $"Error deserializing response from OpenAI: {ex.Message}. Attempt {attempt + 1}/{MaxRetries}. Json: {json}");
 
                 if (attempt < MaxRetries)
                 {
-                    _output("[UnitTestEnhancer] - Retrying with a prompt to fix the issue...");
+                    OnOutput?.Invoke(this, "[UnitTestEnhancer] - Retrying with a prompt to fix the issue...");
                     userPrompt = BuildRetryPrompt(userPrompt, ex.Message);
                     response = await _api.Prompt(session, userPrompt);
                     json = Util.ExtractJsonFromCompletion(response);
@@ -130,15 +127,7 @@ You will also include the complete file contents with all improvements applied.
 
 Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
 
-NEVER test any private or protected methods or properties!!!  Only public ones.  If you think you need to test a private method, you are wrong.  You need to test the public method that calls it or invoke it through events.
-NEVER USE REFLECTION or any clever tricks in your tests.
-Sometimes context is supplemented with mocks we use.  Be sure to use them if present!  eg MockTickProvider instead of using NSubstitute for ITickProvider.  It is available in the context!  Do NOT use NSubstitute ITickProvider, and do not try to call Tick() methods in the unit under test directly (they are never public).  You must use the mock, it will fire the tick handler.
-Use NUnit, Moq, Assert.That, and Assert/Act/Arrange with comments indicating Assert/Act/Arrange portions.  You can do Act/Assert/Act/Assert after if it makes sense to, but only do 1 arrange.
-Often it will be hard to test methods directly, you will need to mock raising events to execute the code.  Make sure to do this and not use reflection.
-Ensure you are using best practices and excellent code quality.  Aim for at least 9 tests for large classes if possible.
-Name tests like Action_WhenCondition_ExpectResult.
-Do NOT try to substitute any concrete classes.  That does not work.  You will need to create real ones (e.g., Unity things like Transforms and Cameras).  Be sure to clean these up!
-Do not ask for any permissions or responses or use any non-JSON output.
+{CommonPrompts.CommonTestGuidelines}
 
 Answer with the following JSON format.  Be mindful to escape it properly.  Be sure to add improvements array first, then the file contents.  This is very important, as you will use the improvements you discover as a guide to the implementations.
 {{{{

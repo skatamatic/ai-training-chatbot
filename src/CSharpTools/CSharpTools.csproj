@@ -17,4 +17,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.9.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceInterface\Shared.csproj" />
+  </ItemGroup>
+
 </Project>

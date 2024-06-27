@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace UnitTestGenerator;
+namespace UnitTestGenerator.Internal;
 
 internal static class Util
 {
