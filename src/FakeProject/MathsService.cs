@@ -37,7 +37,7 @@ public class MathsService(IDelayer delayer, IMathsRequester mathsRequester, IMat
     {
         try
         {
-            var result = mather.DoMaths(e.x, e.y);
+            var result = mather.DoMaths(e.x, e.y, MathsAlgorithm.Algo1);
             outputter.Output($"Result: {result}");
         }
         catch (Exception ex)

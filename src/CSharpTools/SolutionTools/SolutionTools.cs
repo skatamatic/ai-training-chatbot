@@ -11,10 +11,65 @@ public interface ISolutionTools
     Task<string> ReadSourceFile(string path);
     string SuggestTestFileLocation(string sourceFile);
     bool HasTestsAlready(string sourceFile, out string existingTestPath);
+    string FindSolutionFile(string sourceFile);
+    string FindSolutionRoot(string sourceFile);
 }
 
-public class SolutionTools : ISolutionTools
+public class UnitySolutionTools : BaseSolutionTools
 {
+    public override bool IsTestProject(string projectFile)
+    {
+        var doc = XDocument.Load(projectFile);
+        var references = doc.Descendants()
+                            .Where(x => x.Name.LocalName == "Reference" || x.Name.LocalName == "PackageReference")
+                            .Select(x => x.Attribute("Include")?.Value)
+                            .ToList();
+        return references.Any(r => r != null && r.Contains("nunit.framework"));
+    }
+
+    public override string SuggestTestFileLocation(string sourceFile)
+    {
+        var sourceDirectory = Path.GetDirectoryName(sourceFile);
+        var testDirectory = Path.Combine(sourceDirectory, "Tests", "Editor");
+
+        if (!Directory.Exists(testDirectory))
+        {
+            Directory.CreateDirectory(testDirectory);
+        }
+
+        var sourceFileName = Path.GetFileNameWithoutExtension(sourceFile);
+        var testFileName = $"{sourceFileName}Tests.cs";
+
+        return Path.Combine(testDirectory, testFileName);
+    }
+
+    public override async Task<string> SaveTestFile(string sourceFile, string testFileContent)
+    {
+        var testFilePath = SuggestTestFileLocation(sourceFile);
+        if (testFilePath == null) throw new Exception("Unable to determine test file location.");
+
+        var directory = Path.GetDirectoryName(testFilePath);
+        if (!Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllTextAsync(testFilePath, testFileContent);
+
+        return testFilePath;
+    }
+}
+
+public class BaseSolutionTools : ISolutionTools
+{
+    public string FindSolutionRoot(string sourceFile)
+    {
+        var solutionFile = FindSolutionFile(sourceFile);
+        if (solutionFile == null) return null;
+
+        return Path.GetDirectoryName(solutionFile);
+    }
+
     public string FindSolutionFile(string sourceFile)
     {
         var directory = Path.GetDirectoryName(sourceFile);
@@ -69,7 +124,7 @@ public class SolutionTools : ISolutionTools
         return projects;
     }
 
-    public bool IsTestProject(string projectFile)
+    public virtual bool IsTestProject(string projectFile)
     {
         var doc = XDocument.Load(projectFile);
         var references = doc.Descendants("PackageReference")
@@ -106,7 +161,7 @@ public class SolutionTools : ISolutionTools
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    public string SuggestTestFileLocation(string sourceFile)
+    public virtual string SuggestTestFileLocation(string sourceFile)
     {
         var testProject = FindTestProjectForSourceFile(sourceFile);
         if (testProject == null) return null;
@@ -154,7 +209,7 @@ public class SolutionTools : ISolutionTools
         return string.Join('.', commonPrefix);
     }
 
-    public async Task<string> SaveTestFile(string sourceFile, string testFileContent)
+    public virtual async Task<string> SaveTestFile(string sourceFile, string testFileContent)
     {
         var testFilePath = SuggestTestFileLocation(sourceFile);
         if (testFilePath == null) throw new Exception("Unable to determine test file location.");

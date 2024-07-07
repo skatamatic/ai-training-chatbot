@@ -149,7 +149,7 @@ public partial class ReferenceFinderService : IDisposable
 
     private async Task<Solution> GetSolution(string filepath)
     {
-        var path = new SolutionTools.SolutionTools().FindSolutionFile(filepath);
+        var path = new SolutionTools.BaseSolutionTools().FindSolutionFile(filepath);
 
         if (solutions.TryGetValue(path, out var entry))
         {

@@ -1,7 +1,9 @@
 ﻿using CSharpTools;
 using CSharpTools.DefinitionAnalyzer;
 using CSharpTools.ReferenceFinder;
+using CSharpTools.SolutionTools;
 using CSharpTools.TestRunner;
+using CSharpTools.TestRunner.Unity;
 using Microsoft.CodeAnalysis;
 
 var startCol = Console.ForegroundColor;
@@ -9,7 +11,7 @@ var startRow = Console.CursorTop;
 
 Action<string> output = x =>
 {
-    ClearConsoleRow(startRow);
+    //ClearConsoleRow(startRow);
     var col = Console.ForegroundColor;
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.Write(x);
@@ -18,39 +20,55 @@ Action<string> output = x =>
     Console.ForegroundColor = col;
 };
 
-await Test_Defs();
+await Test_TestRunner();
 Console.ReadLine();
 
 async Task Test_TestRunner()
 {
-    const string TEST_PROJECT = "E:\\repos\\MobileHMI\\MDT.Framework\\DataServices.Tests\\DataServices.NUnit.Tests.csproj";
+    const string TEST_FILE = "D:\\Repos\\worklink-app";
 
-    using var runner = new NUnitTestRunner();
+    using var runner = new UnityWebClientTestRunner(new UnitySolutionTools());
     runner.OnOutput += (_, x) => output(x);
-    var result = await runner.RunTestsAsync(TEST_PROJECT, "FracAuto");
+    var result = await runner.RunTestsAsync(TEST_FILE, "WebViewTextVariablesServiceTests");
 
-    Console.WriteLine();
+    IEnumerable<TestCaseResult> filteredResult;
 
-    while(true)
+    if (result.Success)
     {
-        if (result.BuildErrors.Any())
-        {
-            Console.WriteLine($"Build failed (s):\n{string.Join('\n', result.BuildErrors)}");
-        }
-        else if (result.Errors.Any())
-        {
-            Console.WriteLine($"Finished with error(s):\n{string.Join('\n', result.Errors)}");
-        }
-        else
-        {
-            Console.WriteLine($"Passed: {result.PassedTests.Count} Failed: {result.FailedTests.Count}");
-        }
+        filteredResult = result.PassedTests;
+    }
+    else
+    {
+        filteredResult = result.FailedTests.Concat(result.PassedTests);
+    }
 
-        if (!result.FailedTests.Any())
-            break;
+    
+    foreach (var item in filteredResult)
+    {
+        Console.WriteLine($"Test: {item.FullName}");
+        Console.WriteLine($"Result: {item.Result}");
+        if (!string.IsNullOrEmpty(item.Message))
+        {
+            Console.WriteLine($"Message: {item.Message.Trim()}");
+        }
+        if (!string.IsNullOrEmpty(item.StackTrace))
+        {
+            Console.WriteLine($"StackTrace: {item.StackTrace.Trim()}");
+        }
+        Console.WriteLine();
+    }
 
-        Console.WriteLine("Re-running failed tests");
-        result = await runner.RunFailuresAsync(TEST_PROJECT, result);
+    if (result.BuildErrors.Any())
+    {
+        Console.WriteLine($"Build failed (s):\n{string.Join('\n', result.BuildErrors)}");
+    }
+    else if (result.Errors.Any())
+    {
+        Console.WriteLine($"Finished with error(s):\n{string.Join('\n', result.Errors)}");
+    }
+    else
+    {
+        Console.WriteLine($"Passed: {result.PassedTests.Count} Failed: {result.FailedTests.Count}");
     }
 }
 

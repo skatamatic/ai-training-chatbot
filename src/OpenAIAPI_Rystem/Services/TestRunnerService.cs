@@ -1,4 +1,5 @@
-﻿using CSharpTools.TestRunner;
+﻿using CSharpTools.SolutionTools;
+using CSharpTools.TestRunner.Unity;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -12,13 +13,13 @@ public interface ITestRunnerService
 
 public class UnityTestRunnerService : ITestRunnerService
 {
-    readonly UnityTestRunner _runner;
+    readonly UnityWebClientTestRunner _runner;
 
     public event EventHandler<string> OnOutput;
 
     public UnityTestRunnerService()
     {
-        _runner = new UnityTestRunner();
+        _runner = new UnityWebClientTestRunner(new UnitySolutionTools());
         _runner.OnOutput += (_, x) => Emit(x);
     }
 

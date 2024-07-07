@@ -6,9 +6,13 @@ using Shared;
 
 namespace CSharpTools.TestRunner;
 
-public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
+public partial class NUnitTestRunner : IUnitTestRunner, IOutputter
 {
     private Workspace _workspace;
+
+    public bool IsPreparing => false;
+
+    public TestRunnerAction CurrentAction { get; private set; }
 
     public event EventHandler<string> OnOutput;
 
@@ -48,7 +52,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
             };
         }
 
-        OnOutput?.Invoke(this, $"Number of tests to run: {testCount}");
+        OnOutput?.Invoke(this, $"Running {testCount} tests");
 
         // Run dotnet test
         return await RunDotNetTestAsync(projectPath, testFilter);
@@ -100,7 +104,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
         if (processResult.ExitCode != 0)
         {
             OnOutput?.Invoke(this, "Failed to list tests.");
-            processResult.Output.ForEach(x => OnOutput?.Invoke(this, x));
+            processResult.Output.ForEach(x => OnOutput?.Invoke(null, x));
             return (-1, processResult.Output.Where(x=>x.ToLower().Contains("error")).ToList());
         }
 
@@ -113,7 +117,7 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
 
     async Task<Compilation> GetCompilation(string path)
     {
-        var progress = new Progress(x => OnOutput?.Invoke(this, x));
+        var progress = new Progress(x => OnOutput?.Invoke(null, x));
         var workspace = MSBuildWorkspace.Create();
         var project = await workspace.OpenProjectAsync(path, progress, progress);
         
@@ -122,6 +126,8 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
 
     private async Task<List<string>> BuildProjectAsync(string projectPath)
     {
+        CurrentAction = TestRunnerAction.Compiling;
+
         var errors = new List<string>();
 
         var compilation = await GetCompilation(projectPath);
@@ -169,6 +175,8 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
 
     private async Task<TestRunResult> RunDotNetTestAsync(string projectPath, string testFilter)
     {
+        CurrentAction = TestRunnerAction.Running;
+
         var result = new TestRunResult();
 
         var trxFileName = Path.Combine(Path.GetTempPath(), "TestResults.trx");
@@ -265,5 +273,12 @@ public partial class NUnitTestRunner : IUnitTestRunner, IOutputter, IDisposable
         }
 
         return results;
+    }
+
+    public async Task<string> Prepare(string projectPath)
+    {
+        CurrentAction = TestRunnerAction.Validating;
+
+        return string.Empty;
     }
 }

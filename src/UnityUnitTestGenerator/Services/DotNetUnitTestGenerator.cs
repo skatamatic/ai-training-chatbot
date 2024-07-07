@@ -13,7 +13,7 @@ public class DotNetUnitTestGenerator : BaseUnitTestGenerator
     }
 
     public override Task<UnitTestGenerationResult> Generate(string fileToTest)
-        => GenerateInternal(fileToTest, "nunit test generation bot");
+        => GenerateInternal(fileToTest, "nunit test generation bot", "Use file scoped single line namespaces to avoid nesting.");
 
     protected override string GetSupplementalSystemPrompt(string uut)
     {

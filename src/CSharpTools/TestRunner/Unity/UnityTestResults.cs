@@ -1,4 +1,4 @@
-﻿namespace CSharpTools.TestRunner;
+﻿namespace CSharpTools.TestRunner.Unity;
 
 public class UnityTestResults
 {

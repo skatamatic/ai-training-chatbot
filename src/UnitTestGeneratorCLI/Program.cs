@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenAIAPI_Rystem;
 using OpenAIAPI_Rystem.Functions;
 using Shared;
@@ -26,8 +27,6 @@ class Program
 
         // Ensure graceful shutdown
         await host.StopAsync();
-
-        Console.ReadLine();
     }
 
     static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -44,6 +43,10 @@ class Program
             .ConfigureServices((context, services) =>
             {
                 ConfigureServices(context.Configuration, services);
+            })
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
             });
 
     static void ConfigureServices(IConfiguration configuration, IServiceCollection services)

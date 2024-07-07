@@ -16,14 +16,16 @@ public abstract class BaseUnitTestGenerator : IUnitTestGenerator, IOutputter
     protected ReferenceFinderService _refFinder;
     protected DefinitionAnalyzerService _analyzer;
 
+    public bool IsOnlyAnalyzing { get; protected set; }
+
     public event EventHandler<string> OnOutput;
 
     public BaseUnitTestGenerator(GenerationConfig config, IOpenAIAPI api)
     {
         _config = config;
         _api = api;
-        _refFinder = new ReferenceFinderService(x => OnOutput?.Invoke(this, x));
-        _analyzer = new DefinitionAnalyzerService(_refFinder, x => OnOutput?.Invoke(this, x));
+        _refFinder = new ReferenceFinderService(x => OnOutput?.Invoke(null, x));
+        _analyzer = new DefinitionAnalyzerService(_refFinder, x => OnOutput?.Invoke(null, x));
     }
 
     protected void EmitOutput(string message) => OnOutput?.Invoke(this, message);
@@ -32,6 +34,10 @@ public abstract class BaseUnitTestGenerator : IUnitTestGenerator, IOutputter
 
     public async Task<UnitTestGenerationResult> AnalyzeOnly(string fileToTest)
     {
+        IsOnlyAnalyzing = true;
+
+        OnOutput?.Invoke(this, $"Analyzing {Path.GetFileNameWithoutExtension(fileToTest)}");
+
         var uutContent = File.ReadAllText(fileToTest);
         var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
         var analysis = _analyzer.Analyze(definitions, fileToTest).Result;
@@ -42,6 +48,8 @@ public abstract class BaseUnitTestGenerator : IUnitTestGenerator, IOutputter
             TestFileContent = File.ReadAllText(fileToTest)
         };
 
+        OnOutput?.Invoke(this, $"Analyzed required context:\n{BuildContext(analysis)}");
+
         return new UnitTestGenerationResult() { AIResponse = fakeAiResponse, Analysis = analysis, ChatSession = Guid.NewGuid().ToString() };
     }
 
@@ -49,9 +57,9 @@ public abstract class BaseUnitTestGenerator : IUnitTestGenerator, IOutputter
     {
         return $@"
 Here's the file to test:
------------------
+---START OF UUT CODE---
 {uutContent}
------------------
+---END OF UUT CODE---
 
 Here's all the context:
 -----------------
@@ -60,19 +68,20 @@ Here's all the context:
 ";
     }
 
-    protected string BuildSystemPrompt(string uutContent, string role) => BuildGenerationPrompt(
+    protected string BuildSystemPrompt(string uutContent, string role, string additional) => BuildGenerationPrompt(
         role: role,
         language: "c#",
-        supplemental: GetSupplementalSystemPrompt(uutContent));
+        supplemental: GetSupplementalSystemPrompt(uutContent),
+        additionalGuidelines: additional);
 
     private string BuildGenerationPrompt(string role, string language = "c#", string additionalGuidelines = "", string supplemental = "")
     {
         string prompt = @$"
 You are a {role}.  
-You are to take this {language} code as well as all the accompanying context and generate excellent quality and VERY COMPREHENSIVE unit tests for it.  Write as many tests as you can covering functionality and edge cases.
+You are to take this {language} code as well as all the accompanying context and generate excellent quality unit tests for it.  Write as several tests that we will later enhance and verify.  This will serve as the foundation for the enhancements so pay special attention to setup, mocks, supplements, and a base suite of functionality coverage.
 
 {_config.StylePrompt}
-Make sure the namespace for the test precisely matches that of the unit under test's.  Use modern single line namespaces to avoid nesting the whole class.
+Make sure the namespace for the test precisely matches that of the unit under test's.
 
 {CommonPrompts.CommonTestGuidelines}
 {additionalGuidelines}
@@ -109,16 +118,18 @@ Answer with the following json format.  Be mindful to escape it properly:
         return context.ToString();
     }
 
-    protected async Task<UnitTestGenerationResult> GenerateInternal(string fileToTest, string role)
+    protected async Task<UnitTestGenerationResult> GenerateInternal(string fileToTest, string role, string additional)
     {
+        IsOnlyAnalyzing = false;
+ 
         var uutContent = File.ReadAllText(fileToTest);
         var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
         var analysis = _analyzer.Analyze(definitions, fileToTest).Result;
 
-        string systemPrompt = BuildSystemPrompt(uutContent, role);
+        string systemPrompt = BuildSystemPrompt(uutContent, role, additional);
         string userPrompt = BuildUserPrompt(uutContent, BuildContext(analysis));
 
-        EmitOutput($"Prompting OpenAI with the following prompt:\n{userPrompt}");
+        EmitOutput($"Generating tests with the following prompt:\n{userPrompt}");
 
         _api.SystemPrompt = systemPrompt;
         string session = Guid.NewGuid().ToString();
@@ -127,7 +138,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         var json = Util.ExtractJsonFromCompletion(response);
         var testDto = JsonConvert.DeserializeObject<UnitTestAIResponse>(json);
 
-        EmitOutput($"Got response from OpenAI:\n{response}");
+        EmitOutput($"Got response from OpenAI:\n\n{testDto.ToDisplayText()}");
 
         return new UnitTestGenerationResult() { Analysis = analysis, AIResponse = testDto, ChatSession = session };
     }

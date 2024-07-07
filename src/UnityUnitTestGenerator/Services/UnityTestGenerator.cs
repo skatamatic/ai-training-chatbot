@@ -11,7 +11,7 @@ public class UnityTestGenerator : BaseUnitTestGenerator
     }
 
     public override Task<UnitTestGenerationResult> Generate(string fileToTest)
-        => GenerateInternal(fileToTest, "Unity nunit test generation bot");
+        => GenerateInternal(fileToTest, "Unity nunit test generation bot", "");
 
     protected override string GetSupplementalSystemPrompt(string uut)
     {

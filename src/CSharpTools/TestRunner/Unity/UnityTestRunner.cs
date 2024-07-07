@@ -3,10 +3,12 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace CSharpTools.TestRunner;
+namespace CSharpTools.TestRunner.Unity;
 
 public partial class UnityTestRunner : IUnitTestRunner, IOutputter
 {
+    public TestRunnerAction CurrentAction { get; private set; }
+
     public event EventHandler<string> OnOutput;
 
     public UnityTestRunner()
@@ -42,8 +44,8 @@ public partial class UnityTestRunner : IUnitTestRunner, IOutputter
             {
                 FullName = unityTest.TestName,
                 Result = unityTest.Success ? "Passed" : "Failed",
-                Message = unityTest.Failure,
-                StackTrace = unityTest.Log
+                Message = unityTest?.Failure,
+                StackTrace = unityTest?.Log
             };
 
             if (unityTest.Success)
@@ -98,6 +100,7 @@ public partial class UnityTestRunner : IUnitTestRunner, IOutputter
             runTestsCommand += $" -testFilter {filter}";
         }
 
+        CurrentAction = TestRunnerAction.Running;
         OnOutput?.Invoke(this, "Running Unity tests (this can take a while)...");
         bool success = await RunUnityCommandAsync(unityPath, runTestsCommand, tempRedirectedLogPath);
 
@@ -329,5 +332,15 @@ public partial class UnityTestRunner : IUnitTestRunner, IOutputter
         {
             await writer.WriteLineAsync(line);
         }
+    }
+
+    public async Task<string> Prepare(string projectPath)
+    {
+        return string.Empty;
+    }
+
+    public void Dispose()
+    {
+        _ = ForceKillUnity();
     }
 }

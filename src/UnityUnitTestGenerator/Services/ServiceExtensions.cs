@@ -1,8 +1,8 @@
 ﻿using CSharpTools.SolutionTools;
 using CSharpTools.TestRunner;
+using CSharpTools.TestRunner.Unity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenAIAPI_Rystem.Functions;
 using Shared;
 using UnitTestGenerator.Interface;
 using UnitTestGenerator.Model;
@@ -19,16 +19,17 @@ public static class ServiceExtensions
         services.AddSingleton(generationConfig);
         services.AddSingleton(sorcererConfig);
 
-        services.AddSingleton<ISolutionTools, SolutionTools>();
         services.AddSingleton<ConsoleOutputter>();
 
         switch (sorcererConfig.Mode)
         {
             case SorcererMode.Unity:
-                services.AddSingletonAndMonitorOutput<IUnitTestRunner, UnityTestRunner>();
+                services.AddSingleton<ISolutionTools, UnitySolutionTools>();
+                services.AddSingletonAndMonitorOutput<IUnitTestRunner, UnityWebClientTestRunner>();
                 services.AddSingletonAndMonitorOutput<IUnitTestGenerator, UnityTestGenerator>();
                 break;
             case SorcererMode.DotNet:
+                services.AddSingleton<ISolutionTools, BaseSolutionTools>();
                 services.AddSingletonAndMonitorOutput<IUnitTestRunner, NUnitTestRunner>();
                 services.AddSingletonAndMonitorOutput<IUnitTestGenerator, DotNetUnitTestGenerator>();
                 break;

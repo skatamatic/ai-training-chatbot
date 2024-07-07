@@ -6,7 +6,7 @@ using Shared;
 
 namespace OpenAIAPI_Rystem;
 
-public class RystemFunctionAPI : IOpenAIAPI
+public class RystemFunctionAPI : IOpenAIAPI, IOutputter
 {
     private readonly IOpenAi _api;
     private readonly OpenAIConfig _config;
@@ -14,6 +14,8 @@ public class RystemFunctionAPI : IOpenAIAPI
     private readonly Dictionary<string, ChatSession> _sessions = new();
     private readonly Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
     private readonly IEnumerable<ISystemMessageProvider> _systemMessages;
+
+    public event EventHandler<string> OnOutput;
 
     public string ActiveSessionId { get; private set; }
     public string SystemPrompt { get; set; }
@@ -78,6 +80,8 @@ public class RystemFunctionAPI : IOpenAIAPI
             request.AddSystemMessage(provider.SystemMessage);
         }
 
+        OnOutput?.Invoke(this, $"Prompting API in session {sessionId}");
+
         var result = await request.ExecuteAsync(false);
 
         while (IsFunctionCompletion(result))
@@ -96,6 +100,8 @@ public class RystemFunctionAPI : IOpenAIAPI
                 .WithNumberOfChoicesPerPrompt(1);
 
             result = await request.ExecuteAsync(false);
+
+            OnOutput?.Invoke(this, $"Reprompting API with function result");
         }
 
         var resultContent = GetContentFromResult(result);
