@@ -4,13 +4,12 @@ using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
-public class EnumerateFileSystemFunction : FunctionBase
+public class EnumerateFileSystemFunction : FunctionBase<EnumerateFilesRequest, EnumerateFilesResponse>
 {
     public const string FUNCTION_NAME = "enumerate_files";
 
     public override string Name => FUNCTION_NAME;
-    public override string Description => "Lists files at the provided path. Requires well-formed windows paths with a trailing backslash. Returns an error on failure. Only do recursive if explicitly asked. Same with a filter. If it is not needed, *.* will be used automatically. Has a flag for including dirs in the result too.  Filters need to be compatible with .net's Directory.EnumerateFiles method.";
-    public override Type Input => typeof(EnumerateFilesRequest);
+    public override string Description => "Lists files at the provided path. Requires well-formed windows paths with a trailing backslash. Returns an error on failure. Only do recursive if explicitly asked. Same with a filter. If it is not needed, *.* will be used automatically. Has a flag for including dirs in the result too. Filters need to be compatible with .net's Directory.EnumerateFiles method.";
 
     private readonly ISystemService _fileSystemService;
 
@@ -20,24 +19,25 @@ public class EnumerateFileSystemFunction : FunctionBase
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<EnumerateFilesResponse> ExecuteFunctionAsync(EnumerateFilesRequest request)
     {
-        if (request is EnumerateFilesRequest filesRequest)
+        try
         {
-            return await _fileSystemService.GetFilesAsync(filesRequest);
+            return await _fileSystemService.GetFilesAsync(request);
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new EnumerateFilesResponse() { Error = ex.ToString() };
+        }
     }
 }
 
-public class GetFileContentsSystemFunction : FunctionBase
+public class GetFileContentsSystemFunction : FunctionBase<FileContentRequest, FileContentResponse>
 {
     public const string FUNCTION_NAME = "get_file_content";
 
     public override string Name => FUNCTION_NAME;
     public override string Description => "Gets the contents of a file, or an error if it can't.";
-    public override Type Input => typeof(FileContentRequest);
 
     private readonly ISystemService _fileSystemService;
 
@@ -47,24 +47,25 @@ public class GetFileContentsSystemFunction : FunctionBase
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<FileContentResponse> ExecuteFunctionAsync(FileContentRequest request)
     {
-        if (request is FileContentRequest contentRequest)
+        try
         {
-            return await _fileSystemService.GetFileContentsAsync(contentRequest);
+            return await _fileSystemService.GetFileContentsAsync(request);
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new FileContentResponse() { Error = ex.ToString() };
+        }
     }
 }
 
-public class WriteFileContentsSystemFunction : FunctionBase
+public class WriteFileContentsSystemFunction : FunctionBase<WriteContentRequest, WriteContentResponse>
 {
     public const string FUNCTION_NAME = "write_file_content";
 
     public override string Name => FUNCTION_NAME;
-    public override string Description => "Writes content to a file and returns the file path or an error.  Optionally appends.";
-    public override Type Input => typeof(WriteContentRequest);
+    public override string Description => "Writes content to a file and returns the file path or an error. Optionally appends.";
 
     private readonly ISystemService _fileSystemService;
 
@@ -74,24 +75,25 @@ public class WriteFileContentsSystemFunction : FunctionBase
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<WriteContentResponse> ExecuteFunctionAsync(WriteContentRequest request)
     {
-        if (request is WriteContentRequest contentRequest)
+        try
         {
-            return await _fileSystemService.WriteFileContentsAsync(contentRequest);
+            return await _fileSystemService.WriteFileContentsAsync(request);
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new WriteContentResponse() { Error = ex.ToString() };
+        }
     }
 }
 
-public class ExecutePowerShellScriptSystemFunction : FunctionBase
+public class ExecutePowerShellScriptSystemFunction : FunctionBase<PowerShellScriptRequest, PowerShellScriptResponse>
 {
     public const string FUNCTION_NAME = "execute_powershell_script";
 
     public override string Name => FUNCTION_NAME;
-    public override string Description => "Executes a PowerShell script and returns the output or an error.  ALWAYS pipe output (like Writes) to the Information stream via '| Write-Information'";
-    public override Type Input => typeof(PowerShellScriptRequest);
+    public override string Description => "Executes a PowerShell script and returns the output or an error. ALWAYS pipe output (like Writes) to the Information stream via '| Write-Information'";
 
     private readonly ISystemService _fileSystemService;
 
@@ -101,17 +103,21 @@ public class ExecutePowerShellScriptSystemFunction : FunctionBase
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<PowerShellScriptResponse> ExecuteFunctionAsync(PowerShellScriptRequest request)
     {
-        if (request is PowerShellScriptRequest scriptRequest)
+        try
         {
-            scriptRequest.RunInSeparateConsole = false;
-            return await _fileSystemService.ExecutePowerShellScriptAsync(scriptRequest);
+            request.RunInSeparateConsole = false;
+            return await _fileSystemService.ExecutePowerShellScriptAsync(request);
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new PowerShellScriptResponse() { Error = ex.ToString() };
+        }
     }
 }
+
+// Request and Response classes
 
 public class EnumerateFilesRequest
 {

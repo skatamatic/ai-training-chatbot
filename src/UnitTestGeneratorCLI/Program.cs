@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 using OpenAIAPI_Rystem;
 using OpenAIAPI_Rystem.Functions;
 using Shared;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Services;
+using Sorcerer.Interface;
+using Sorcerer.Services;
 
-namespace UnitTestGeneratorCLI;
+namespace Sorcerer.Console;
 
 class Program
 {
@@ -66,6 +66,8 @@ class Program
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
         services.AddSingleton<IFunctionInvocationEmitter, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
         services.AddOpenAiChatFunction<NCalcFunction>();
+
+        services.AddHostedService<ConsoleOutputter>();
 
         services.ConfigureSorcerer(configuration);
     }

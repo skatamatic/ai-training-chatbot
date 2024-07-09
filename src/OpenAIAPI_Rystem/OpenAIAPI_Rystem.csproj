@@ -1,10 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Functions\KiwiFunctions.cs~RF7b0f0f14.TMP" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Cake.Powershell" Version="3.0.0" />
@@ -17,7 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CSharpTools\CSharpTools.csproj" />
     <ProjectReference Include="..\MDT_API\MDT_API.csproj" />
-    <ProjectReference Include="..\OpenAIAPI_BasicRest\OpenAIAPI_BasicRest.csproj" />
   </ItemGroup>
 
 </Project>

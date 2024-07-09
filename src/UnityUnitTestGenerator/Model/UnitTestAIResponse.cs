@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Text;
 
-namespace UnitTestGenerator.Model;
+namespace Sorcerer.Model;
 
 public class UnitTestAIResponse
 {

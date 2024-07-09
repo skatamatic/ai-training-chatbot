@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace UnitTestGenerator.Model;
+namespace Sorcerer.Model;
 
 public class UnitTestAIFix
 {

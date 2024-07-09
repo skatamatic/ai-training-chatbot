@@ -3,30 +3,26 @@ using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
-public class FetchKiwiFileFunction : FunctionBase
+public class FetchKiwiFileFunction : FunctionBase<FetchKiwiFileParameters, FetchKiwiFileResult>
 {
     public override string Name => "fetch_kiwi_file";
 
-    public override string Description => $"Fetches a kiwi configuration file and returns the contents, or an error if there was one.  Parameters include the file descriptor name (can be any of '{String.Join(',',KiwiFiles.DescriptorLookup.Keys)}') as well as the ipv4 address (not protocol/port).";
-
-    public override Type Input => typeof(FetchKiwiFileParameters);
+    public override string Description => $"Fetches a kiwi configuration file and returns the contents, or an error if there was one. Parameters include the file descriptor name (can be any of '{String.Join(',', KiwiFiles.DescriptorLookup.Keys)}') as well as the ipv4 address (not protocol/port).";
 
     readonly IKiwiService kiwiService;
 
-    public FetchKiwiFileFunction(IKiwiService kiwiService, IFunctionInvocationEmitter emitter) 
+    public FetchKiwiFileFunction(IKiwiService kiwiService, IFunctionInvocationEmitter emitter)
         : base(emitter)
     {
         this.kiwiService = kiwiService;
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<FetchKiwiFileResult> ExecuteFunctionAsync(FetchKiwiFileParameters request)
     {
         try
         {
-            FetchKiwiFileParameters parameters = (FetchKiwiFileParameters)request;
-
-            var file = KiwiFiles.DescriptorLookup[parameters.Name];
-            var content = await kiwiService.FetchFile(parameters.IPAddress, file);
+            var file = KiwiFiles.DescriptorLookup[request.Name];
+            var content = await kiwiService.FetchFile(request.IPAddress, file);
 
             return new FetchKiwiFileResult() { FileContent = content };
         }
@@ -37,13 +33,11 @@ public class FetchKiwiFileFunction : FunctionBase
     }
 }
 
-public class GetKiwiSensorValuesFunction : FunctionBase
+public class GetKiwiSensorValuesFunction : FunctionBase<GetKiwiSensorValuesParameters, GetKiwiSensorValuesResult>
 {
     public override string Name => "get_current_sensor_values";
 
-    public override string Description => $"Queries the current values of all sensor values from kiwi, with an optional filter.  If the filter is null, all sensor values are retrieved.  Do not try to use a filter unless you know the EXACT sensor key - either from a previous sensor value request or after parsing a config file that contains it.  The key is not the same as a name and must be exact so it is not useful to guess.  If we get an entry with NO value, it is not a supported sensor.  Kiwi will return all the sensors provided in a filter even if they don't exist...  Also if we get FLT_MAX back (value not string) it means the sensor is NOT CONNECTED meaning it does not have any value but is in fact configured by kiwi.";
-
-    public override Type Input => typeof(GetKiwiSensorValuesParameters);
+    public override string Description => $"Queries the current values of all sensor values from kiwi, with an optional filter. If the filter is null, all sensor values are retrieved. Do not try to use a filter unless you know the EXACT sensor key - either from a previous sensor value request or after parsing a config file that contains it. The key is not the same as a name and must be exact so it is not useful to guess. If we get an entry with NO value, it is not a supported sensor. Kiwi will return all the sensors provided in a filter even if they don't exist... Also if we get FLT_MAX back (value not string) it means the sensor is NOT CONNECTED meaning it does not have any value but is in fact configured by kiwi.";
 
     readonly IKiwiService kiwiService;
 
@@ -53,13 +47,11 @@ public class GetKiwiSensorValuesFunction : FunctionBase
         this.kiwiService = kiwiService;
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<GetKiwiSensorValuesResult> ExecuteFunctionAsync(GetKiwiSensorValuesParameters request)
     {
         try
         {
-            GetKiwiSensorValuesParameters parameters = (GetKiwiSensorValuesParameters)request;
-
-            var content = await kiwiService.GetSensorValues(parameters.IPAddress, parameters.Filter);
+            var content = await kiwiService.GetSensorValues(request.IPAddress, request.Filter);
 
             return new GetKiwiSensorValuesResult() { Content = content };
         }
@@ -70,13 +62,11 @@ public class GetKiwiSensorValuesFunction : FunctionBase
     }
 }
 
-public class GetKiwiSensorConfigsFunction : FunctionBase
+public class GetKiwiSensorConfigsFunction : FunctionBase<GetKiwiSensorConfigsParameters, GetKiwiSensorConfigsResult>
 {
     public override string Name => "get_current_sensor_configs";
 
-    public override string Description => $"Queries the current configuration of all sensors from kiwi.  Include things like signal range, sensor range, etc";
-
-    public override Type Input => typeof(GetKiwiSensorConfigsParameters);
+    public override string Description => $"Queries the current configuration of all sensors from kiwi. Include things like signal range, sensor range, etc.";
 
     readonly IKiwiService kiwiService;
 
@@ -86,13 +76,11 @@ public class GetKiwiSensorConfigsFunction : FunctionBase
         this.kiwiService = kiwiService;
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<GetKiwiSensorConfigsResult> ExecuteFunctionAsync(GetKiwiSensorConfigsParameters request)
     {
         try
         {
-            GetKiwiSensorConfigsParameters parameters = (GetKiwiSensorConfigsParameters)request;
-
-            var content = await kiwiService.GetSensorConfigs(parameters.IPAddress);
+            var content = await kiwiService.GetSensorConfigs(request.IPAddress);
 
             return new GetKiwiSensorConfigsResult() { Content = content };
         }
@@ -103,13 +91,11 @@ public class GetKiwiSensorConfigsFunction : FunctionBase
     }
 }
 
-public class GetKiwiAlarmConfigsFunction : FunctionBase
+public class GetKiwiAlarmConfigsFunction : FunctionBase<GetKiwiAlarmConfigsParameters, GetKiwiAlarmConfigsResult>
 {
     public override string Name => "get_alarm_configs";
 
-    public override string Description => $"Queries the current configuration of all alarms and alarm constraints.  Include things like setpoints, hold time (how long it must be active to trip), reset time (the opposite - how long a tripped constraint must be inactive to clear), whether it's enabled, the associated sensor etc.";
-
-    public override Type Input => typeof(GetKiwiAlarmConfigsParameters);
+    public override string Description => $"Queries the current configuration of all alarms and alarm constraints. Include things like setpoints, hold time (how long it must be active to trip), reset time (the opposite - how long a tripped constraint must be inactive to clear), whether it's enabled, the associated sensor etc.";
 
     readonly IKiwiService kiwiService;
 
@@ -119,13 +105,11 @@ public class GetKiwiAlarmConfigsFunction : FunctionBase
         this.kiwiService = kiwiService;
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<GetKiwiAlarmConfigsResult> ExecuteFunctionAsync(GetKiwiAlarmConfigsParameters request)
     {
         try
         {
-            GetKiwiAlarmConfigsParameters parameters = (GetKiwiAlarmConfigsParameters)request;
-
-            var content = await kiwiService.GetAlarmConfigs(parameters.IPAddress);
+            var content = await kiwiService.GetAlarmConfigs(request.IPAddress);
 
             return new GetKiwiAlarmConfigsResult() { Content = content };
         }
@@ -136,13 +120,11 @@ public class GetKiwiAlarmConfigsFunction : FunctionBase
     }
 }
 
-public class GetKiwiAlarmsFunction : FunctionBase
+public class GetKiwiAlarmsFunction : FunctionBase<GetKiwiAlarmsParameters, GetKiwiAlarmsResult>
 {
     public override string Name => "get_active_alarms";
 
     public override string Description => $"Queries the current active alarms (both kiwi and j1939 faults)";
-
-    public override Type Input => typeof(GetKiwiAlarmsParameters);
 
     readonly IKiwiService kiwiService;
 
@@ -152,13 +134,11 @@ public class GetKiwiAlarmsFunction : FunctionBase
         this.kiwiService = kiwiService;
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<GetKiwiAlarmsResult> ExecuteFunctionAsync(GetKiwiAlarmsParameters request)
     {
         try
         {
-            GetKiwiAlarmsParameters parameters = (GetKiwiAlarmsParameters)request;
-
-            var content = await kiwiService.GetAlarms(parameters.IPAddress);
+            var content = await kiwiService.GetAlarms(request.IPAddress);
 
             return new GetKiwiAlarmsResult() { Content = content };
         }
@@ -168,6 +148,8 @@ public class GetKiwiAlarmsFunction : FunctionBase
         }
     }
 }
+
+// Parameters and Result classes
 
 public class GetKiwiAlarmConfigsParameters
 {

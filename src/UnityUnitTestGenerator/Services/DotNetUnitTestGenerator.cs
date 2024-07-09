@@ -1,10 +1,8 @@
-﻿using Newtonsoft.Json;
-using Shared;
+﻿using Shared;
+using Sorcerer.Model;
 using System.Text.RegularExpressions;
-using UnitTestGenerator.Internal;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public class DotNetUnitTestGenerator : BaseUnitTestGenerator
 {

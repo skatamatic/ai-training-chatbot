@@ -1,6 +1,6 @@
 ﻿using CSharpTools.TestRunner;
 
-namespace UnitTestGenerator.Model;
+namespace Sorcerer.Model;
 
 public class FixContext
 {

@@ -1,6 +1,6 @@
-﻿using UnitTestGenerator.Model;
+﻿using Sorcerer.Model;
 
-namespace UnitTestGenerator.Interface;
+namespace Sorcerer.Interface;
 
 public interface IUnitTestFixer
 {

@@ -2,12 +2,12 @@
 using CSharpTools.ReferenceFinder;
 using Newtonsoft.Json;
 using Shared;
+using Sorcerer.Interface;
+using Sorcerer.Internal;
+using Sorcerer.Model;
 using System.Text;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Internal;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public abstract class BaseUnitTestGenerator : IUnitTestGenerator, IOutputter
 {
@@ -121,7 +121,7 @@ Answer with the following json format.  Be mindful to escape it properly:
     protected async Task<UnitTestGenerationResult> GenerateInternal(string fileToTest, string role, string additional)
     {
         IsOnlyAnalyzing = false;
- 
+
         var uutContent = File.ReadAllText(fileToTest);
         var definitions = await _refFinder.FindDefinitions(fileToTest, _config.ContextSearchDepth);
         var analysis = _analyzer.Analyze(definitions, fileToTest).Result;

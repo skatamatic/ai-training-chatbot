@@ -8,13 +8,12 @@ public interface IPromptingFunction
     void InstallApi(IOpenAIAPI api);
 }
 
-public class FunctionChainFunction : FunctionBase, IPromptingFunction
+public class FunctionChainFunction : FunctionBase<FunctionChainRequest, FunctionChainResponse>, IPromptingFunction
 {
     public const string FUNCTION_NAME = "function_chain";
 
     public override string Name => FUNCTION_NAME;
-    public override string Description => "Allows you to tell me a prompt I can use to achieve a goal.  You can use other functions to find the data you might need in an iterative manner, perhaps chaining multiple of these commands together etc.  Use the new session bool if it would save tokens to exclude the chain from the main session context (ie to summarize a file, or to extract function names from files).  Remember the new session will not have any context, so give very detailed instructions including full file paths etc.";
-    public override Type Input => typeof(FunctionChainRequest);
+    public override string Description => "Allows you to tell me a prompt I can use to achieve a goal. You can use other functions to find the data you might need in an iterative manner, perhaps chaining multiple of these commands together etc. Use the new session bool if it would save tokens to exclude the chain from the main session context (ie to summarize a file, or to extract function names from files). Remember the new session will not have any context, so give very detailed instructions including full file paths etc.";
 
     private IOpenAIAPI _api;
 
@@ -23,19 +22,22 @@ public class FunctionChainFunction : FunctionBase, IPromptingFunction
     {
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<FunctionChainResponse> ExecuteFunctionAsync(FunctionChainRequest request)
     {
         if (_api == null)
         {
             throw new InvalidOperationException("API is not set");
         }
 
-        if (request is FunctionChainRequest chainRequest)
+        try
         {
-            return await _api.Prompt(chainRequest.NewSession ? Guid.NewGuid().ToString() : _api.ActiveSessionId, chainRequest.Prompt);
+            var result = await _api.Prompt(request.NewSession ? Guid.NewGuid().ToString() : _api.ActiveSessionId, request.Prompt);
+            return new FunctionChainResponse { Result = result };
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new FunctionChainResponse { Result = ex.ToString() };
+        }
     }
 
     public void InstallApi(IOpenAIAPI api)
@@ -43,6 +45,8 @@ public class FunctionChainFunction : FunctionBase, IPromptingFunction
         _api = api;
     }
 }
+
+// Request and Response classes
 
 public class FunctionChainRequest
 {

@@ -1,7 +1,8 @@
-﻿using Spectre.Console;
+﻿using System;
+using Spectre.Console;
 using System.Text.RegularExpressions;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Console;
 
 public class SyntaxHighlighter
 {
@@ -35,9 +36,9 @@ public class SyntaxHighlighter
             {
                 AnsiConsole.MarkupLine(highlightedLine);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(line);
+                System.Console.WriteLine(line);
             }
         }
     }

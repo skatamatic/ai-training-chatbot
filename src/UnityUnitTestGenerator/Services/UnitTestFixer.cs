@@ -1,13 +1,13 @@
 ﻿using CSharpTools.TestRunner;
 using Newtonsoft.Json;
 using Shared;
+using Sorcerer.Interface;
+using Sorcerer.Internal;
+using Sorcerer.Model;
 using System.Text;
 using System.Text.RegularExpressions;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Internal;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public class UnitTestFixer : IUnitTestFixer, IOutputter
 {
@@ -130,7 +130,7 @@ Answer with the following json format.  Be mindful to escape it properly:
         {
             foreach (var error in testRun.Errors)
             {
-                var context = GetDotNetTestErrorContext(rootPath,error);
+                var context = GetDotNetTestErrorContext(rootPath, error);
                 if (!string.IsNullOrEmpty(context))
                     sb.AppendLine($"Analyzer Error\n---------\n{error}\n---Start of code with issue---\n{context}\n---End of code with issue---");
                 else

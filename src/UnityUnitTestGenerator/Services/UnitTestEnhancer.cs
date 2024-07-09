@@ -1,12 +1,12 @@
 ﻿using CSharpTools.DefinitionAnalyzer;
 using Newtonsoft.Json;
 using Shared;
+using Sorcerer.Interface;
+using Sorcerer.Internal;
+using Sorcerer.Model;
 using System.Text;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Internal;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public class UnitTestEnhancer : IUnitTestEnhancer, IOutputter
 {

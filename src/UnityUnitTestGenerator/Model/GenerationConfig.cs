@@ -1,4 +1,4 @@
-﻿namespace UnitTestGenerator.Model;
+﻿namespace Sorcerer.Model;
 
 public class GenerationConfig
 {

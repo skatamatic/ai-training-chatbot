@@ -1,6 +1,6 @@
 ﻿using CSharpTools.DefinitionAnalyzer;
 
-namespace UnitTestGenerator.Model;
+namespace Sorcerer.Model;
 
 public class UnitTestGenerationResult
 {

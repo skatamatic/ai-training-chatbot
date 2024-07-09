@@ -1,4 +1,4 @@
-﻿namespace UnitTestGenerator.Interface;
+﻿namespace Sorcerer.Interface;
 
 public interface IUnitTestSorcerer
 {

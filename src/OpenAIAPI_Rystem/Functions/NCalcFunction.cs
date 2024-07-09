@@ -1,33 +1,26 @@
-﻿using MySqlX.XDevAPI.Common;
-using NCalc;
+﻿using NCalc;
 using Newtonsoft.Json;
 using Shared;
 using System.Text;
 
 namespace OpenAIAPI_Rystem.Functions;
 
-public class NCalcFunction : FunctionBase
+public class NCalcFunction : FunctionBase<NCalcRequest, NCalcResponse>
 {
     public const string FUNCTION_NAME = "evaluate_expression";
 
     public override string Name => FUNCTION_NAME;
     public override string Description => "Takes a collection of expressions and uses NCalc (the .net library) to do math.  Use parameter PI to represent Math.PI (ie expression='PI * 2').  Use this anytime you need to do any math calculations (like when creating asserts for unit tests that require some math).  Returns a string that is typically a number (double).  Keep expressions as simple as possible - avoid ifs etc and stick to ncalc functions like Sin,Cos,Pow,etc and PI if needed.  DO NOT PREFIX WITH 'Math.', use NCalc syntax ONLY.  Don't use .ToString or ANY c# programming - stick to NCalc supported expression sytax only.";
-    public override Type Input => typeof(NCalcRequest);
-
+    
     public NCalcFunction(IFunctionInvocationEmitter invocationEmitter)
         : base(invocationEmitter)
     {
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override Task<NCalcResponse> ExecuteFunctionAsync(NCalcRequest request)
     {
-        if (request is not NCalcRequest ncalcRequest)
-        {
-            throw new ArgumentException("Invalid request type", nameof(request));
-        }
-
         StringBuilder resultBuilder = new();
-        foreach (var expression in ncalcRequest.Expressions)
+        foreach (var expression in request.Expressions)
         {
             try
             {
@@ -44,7 +37,7 @@ public class NCalcFunction : FunctionBase
                 resultBuilder.AppendLine(($"{expression} had error {ex.Message}"));
             }
         }
-        return new ResultResponse { Result = resultBuilder.ToString() };
+        return Task.FromResult(new NCalcResponse { Result = resultBuilder.ToString() });
     }
 
     private void Expression_EvaluateParameter(string name, ParameterArgs args)
@@ -82,7 +75,7 @@ public class NCalcRequest
     public string[] Expressions { get; set; }
 }
 
-public class ResultResponse
+public class NCalcResponse
 {
     [JsonProperty("result")]
     public string Result { get; set; }

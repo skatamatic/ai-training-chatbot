@@ -1,4 +1,4 @@
-﻿namespace UnitTestGenerator.Internal;
+﻿namespace Sorcerer.Internal;
 
 internal static class CommonPrompts
 {

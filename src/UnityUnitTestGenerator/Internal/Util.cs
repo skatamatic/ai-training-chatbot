@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace UnitTestGenerator.Internal;
+namespace Sorcerer.Internal;
 
 internal static class Util
 {

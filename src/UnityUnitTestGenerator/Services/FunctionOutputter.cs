@@ -1,9 +1,6 @@
-﻿using CSharpTools.TestRunner;
-using Microsoft.Extensions.Hosting;
-using Shared;
-using UnitTestGenerator.Interface;
+﻿using Shared;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public class FunctionOutputter : IOutputter
 {

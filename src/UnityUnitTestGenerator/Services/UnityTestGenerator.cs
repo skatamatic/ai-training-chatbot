@@ -1,8 +1,8 @@
 ﻿using Shared;
+using Sorcerer.Model;
 using System.Text.RegularExpressions;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public class UnityTestGenerator : BaseUnitTestGenerator
 {

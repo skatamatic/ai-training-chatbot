@@ -30,7 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenAIAPI_Rystem\OpenAIAPI_Rystem.csproj" />
     <ProjectReference Include="..\ServiceInterface\Shared.csproj" />
-    <ProjectReference Include="..\UnityUnitTestGenerator\UnitTestGenerator.csproj" />
+    <ProjectReference Include="..\UnityUnitTestGenerator\Sorcerer.csproj" />
   </ItemGroup>
 
 </Project>

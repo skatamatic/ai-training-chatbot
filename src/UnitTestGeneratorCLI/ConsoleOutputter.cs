@@ -2,20 +2,20 @@
 using Microsoft.Extensions.Hosting;
 using Shared;
 using SixLabors.ImageSharp.Processing;
+using Sorcerer.Interface;
+using Sorcerer.Model;
+using Sorcerer.Services;
 using Spectre.Console;
 using System.Text;
 using System.Text.RegularExpressions;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Console;
 
 public class ConsoleOutputter : IHostedService
 {
     readonly IEnumerable<IOutputter> _outputters;
     readonly UnitTestSorcererConfig _config;
     readonly Status status;
-    readonly Task statusTask;
     readonly CancellationTokenSource cts = new();
     readonly SemaphoreSlim semaphore = new(1, 1);
 
@@ -29,24 +29,23 @@ public class ConsoleOutputter : IHostedService
         _config = config;
 
         if (_config.Beautify)
-        { 
-            Console.OutputEncoding = Encoding.UTF8;
+        {
+            System.Console.OutputEncoding = Encoding.UTF8;
 
             status = AnsiConsole.Status()
                     .AutoRefresh(false)
                     .Spinner(Spinner.Known.Dots)
                     .SpinnerStyle(Style.Parse("green bold"));
 
-            statusTask = status.StartAsync("Starting...", async ctx =>
+            Task.Run(() => status.StartAsync("Starting...", async ctx =>
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    await Task.Delay(50);
-
                     if (lastAction == null || suspendSpinner)
                         continue;
 
                     await semaphore.WaitAsync();
+                    await Task.Delay(50);
 
                     if (ctx.Status != lastAction)
                         ctx.Status(lastAction);
@@ -55,7 +54,7 @@ public class ConsoleOutputter : IHostedService
 
                     semaphore.Release();
                 }
-            });
+            }));
         }
     }
 
@@ -71,7 +70,7 @@ public class ConsoleOutputter : IHostedService
 
         suspendSpinner = true;
 
-        var key = Console.ReadKey(true);
+        var key = System.Console.ReadKey(true);
 
         if (key.Key == ConsoleKey.Enter)
         {
@@ -86,18 +85,18 @@ public class ConsoleOutputter : IHostedService
         var image = new CanvasImage("Resources/splash.png");
         image.NearestNeighborResampler();
         Align layout;
-        
-        for (int i = 5; i < (Console.WindowWidth / 2.5) - 5; i += (1 + (int)(i * 0.1)))
+
+        for (int i = 5; i < System.Console.WindowWidth / 2.5 - 5; i += 1 + (int)(i * 0.1))
         {
             image.MaxWidth = i;
             layout = new Align(image, HorizontalAlignment.Center, VerticalAlignment.Middle);
-            
+
             AnsiConsole.Write(layout);
             await Task.Delay(40);
         }
 
         await Task.Delay(400);
-        image.MaxWidth = (Console.WindowWidth / 3) - 5;
+        image.MaxWidth = System.Console.WindowWidth / 3 - 5;
 
         for (int i = 0; i < 20; i++)
         {
@@ -106,8 +105,8 @@ public class ConsoleOutputter : IHostedService
             if (image.MaxWidth < 3)
                 break;
 
-            image.Mutate(x=>x.Skew(0.1f + (i * 0.6f), 0.1f + (i * 0.2f)));
-            
+            image.Mutate(x => x.Skew(0.1f + i * 0.6f, 0.1f + i * 0.2f));
+
             layout = new Align(image, HorizontalAlignment.Center, VerticalAlignment.Middle);
 
             try
@@ -138,7 +137,7 @@ public class ConsoleOutputter : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await ShowSplash();
-        
+
         PauseForPresentation("StartAsync");
 
         foreach (var outputter in _outputters)
@@ -186,7 +185,7 @@ public class ConsoleOutputter : IHostedService
         await semaphore.WaitAsync();
         try
         {
-            var initialColor = Console.ForegroundColor;
+            var initialColor = System.Console.ForegroundColor;
 
             string color = "darkgray";
             string action = "";
@@ -298,7 +297,7 @@ public class ConsoleOutputter : IHostedService
 
             string senderName = sender.GetType().Name;
             lastAction = action;
-            
+
             //Don't output duplicate messages
             if (senderName == lastSender && message == lastMessage)
             {
@@ -313,12 +312,12 @@ public class ConsoleOutputter : IHostedService
             {
                 var lines = message.Trim().Split('\n');
                 suspendSpinner = true;
-                await Task.Delay(100 + Math.Min(100, (int)(3 * lines.Count())));
-                
+                await Task.Delay(100 + Math.Min(100, 3 * lines.Count()));
+
                 AnsiConsole.MarkupLine($"[[[{color}]{senderName}[/]]] [deepskyblue4_1]{lines.First().Replace("[", "[[").Replace("]", "]]")}[/]");
                 BeautifyCodeSections(lines.Skip(1).ToArray(), color);
-                
-                await Task.Delay(100 + Math.Min(100, (int)(3 * lines.Count())));
+
+                await Task.Delay(100 + Math.Min(100, 3 * lines.Count()));
                 suspendSpinner = false;
             }
 
@@ -339,7 +338,7 @@ public class ConsoleOutputter : IHostedService
         string lastLine = "";
         int consecutiveBlankLines = 0;
 
-        foreach (var line in lines.Select(x=>x.Trim('\r', '\n')))
+        foreach (var line in lines.Select(x => x.Trim('\r', '\n')))
         {
             bool isMatchLine = false;
 
@@ -352,13 +351,13 @@ public class ConsoleOutputter : IHostedService
             else if (Regex.IsMatch(line, endRegex, RegexOptions.IgnoreCase))
             {
                 isCode = false;
-                consecutiveBlankLines = 0; 
+                consecutiveBlankLines = 0;
                 isMatchLine = true;
             }
             else if (line.Trim() == "-----START OF ISSUES-----" || line.Trim() == "-----END OF ISSUES----")
             {
                 isMatchLine = true;
-                consecutiveBlankLines = 0; 
+                consecutiveBlankLines = 0;
             }
 
             if (string.IsNullOrWhiteSpace(line) || isMatchLine)

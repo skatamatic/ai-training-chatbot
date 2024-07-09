@@ -2,12 +2,12 @@
 using CSharpTools.SolutionTools;
 using CSharpTools.TestRunner;
 using Shared;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Model;
+using Sorcerer.Interface;
+using Sorcerer.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer;
 
-public class UnitTestSorcerer : IUnitTestSorcerer, IOutputter
+public class Sorcerer : IUnitTestSorcerer, IOutputter
 {
     private readonly IUnitTestFixer _fixer;
     private readonly IUnitTestGenerator _generator;
@@ -18,7 +18,7 @@ public class UnitTestSorcerer : IUnitTestSorcerer, IOutputter
 
     public event EventHandler<string> OnOutput;
 
-    public UnitTestSorcerer(UnitTestSorcererConfig config, IUnitTestFixer fixer, IUnitTestGenerator generator, IUnitTestRunner runner, IUnitTestEnhancer enhancer, ISolutionTools solutionTools)
+    public Sorcerer(UnitTestSorcererConfig config, IUnitTestFixer fixer, IUnitTestGenerator generator, IUnitTestRunner runner, IUnitTestEnhancer enhancer, ISolutionTools solutionTools)
     {
         _fixer = fixer;
         _generator = generator;

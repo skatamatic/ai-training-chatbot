@@ -4,10 +4,10 @@ using CSharpTools.TestRunner.Unity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shared;
-using UnitTestGenerator.Interface;
-using UnitTestGenerator.Model;
+using Sorcerer.Interface;
+using Sorcerer.Model;
 
-namespace UnitTestGenerator.Services;
+namespace Sorcerer.Services;
 
 public static class ServiceExtensions
 {
@@ -18,8 +18,6 @@ public static class ServiceExtensions
 
         services.AddSingleton(generationConfig);
         services.AddSingleton(sorcererConfig);
-
-        services.AddSingleton<ConsoleOutputter>();
 
         switch (sorcererConfig.Mode)
         {
@@ -37,11 +35,9 @@ public static class ServiceExtensions
 
         services.AddSingletonAndMonitorOutput<IUnitTestFixer, UnitTestFixer>();
         services.AddSingletonAndMonitorOutput<IUnitTestEnhancer, UnitTestEnhancer>();
-        services.AddSingletonAndMonitorOutput<IUnitTestSorcerer, UnitTestSorcerer>();
+        services.AddSingletonAndMonitorOutput<IUnitTestSorcerer, Sorcerer>();
 
         services.AddSingleton<IOutputter, FunctionOutputter>();
-
-        services.AddHostedService<ConsoleOutputter>();
     }
 
     public static IServiceCollection AddSingletonAndMonitorOutput<TService, TImplementation>(this IServiceCollection services)

@@ -4,14 +4,13 @@ using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
-public class InfluxQueryAPIFunction : FunctionBase
+public class InfluxQueryAPIFunction : FunctionBase<InfluxQueryRequest, InfluxResponse>
 {
     public const string FUNCTION_NAME = "query_influx";
 
     public override string Name => FUNCTION_NAME;
     public override string Description => "Queries an influx database given a host, database and influxql query.  Host and database have defaults, but if host is set we must include the protocol and port (http://127.0.0.1:8086 typicaly)";
-    public override Type Input => typeof(InfluxQueryRequest);
-
+    
     private readonly IInfluxService _influx;
 
     public InfluxQueryAPIFunction(IInfluxService influx, IFunctionInvocationEmitter invocationEmitter)
@@ -20,25 +19,19 @@ public class InfluxQueryAPIFunction : FunctionBase
         _influx = influx ?? throw new ArgumentNullException(nameof(influx));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<InfluxResponse> ExecuteFunctionAsync(InfluxQueryRequest request)
     {
-        if (request is InfluxQueryRequest influxRequest)
-        {
-            return await _influx.Query(influxRequest);
-        }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        return await _influx.Query(request);
     }
 }
 
-public class InfluxWriteAPIFunction : FunctionBase
+public class InfluxWriteAPIFunction : FunctionBase<InfluxWriteRequest, InfluxResponse>
 {
     public const string FUNCTION_NAME = "write_influx";
 
     public override string Name => FUNCTION_NAME;
     public override string Description => "Writes a point to an influx database given a host, database and point datastructure. Timestamp is mandatory and should use standard C# formatting.  Host and database have defaults, but if host is set we must include the protocol and port (http://127.0.0.1:8086 typicaly)";
-    public override Type Input => typeof(InfluxWriteRequest);
-
+    
     private readonly IInfluxService _influx;
 
     public InfluxWriteAPIFunction(IInfluxService influx, IFunctionInvocationEmitter invocationEmitter)
@@ -47,14 +40,9 @@ public class InfluxWriteAPIFunction : FunctionBase
         _influx = influx ?? throw new ArgumentNullException(nameof(influx));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<InfluxResponse> ExecuteFunctionAsync(InfluxWriteRequest request)
     {
-        if (request is InfluxWriteRequest influxRequest)
-        {
-            return await _influx.Write(influxRequest);
-        }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        return await _influx.Write(request);
     }
 }
 

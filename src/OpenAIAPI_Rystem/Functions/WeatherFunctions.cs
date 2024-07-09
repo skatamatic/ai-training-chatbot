@@ -4,13 +4,12 @@ using Shared;
 
 namespace OpenAIAPI_Rystem.Functions;
 
-public class WeatherAPIFunction : FunctionBase
+public class WeatherAPIFunction : FunctionBase<WeatherRequest, WeatherResponse>
 {
     public const string FUNCTION_NAME = "get_current_weather";
 
     public override string Name => FUNCTION_NAME;
     public override string Description => "Gets the weather in a given location";
-    public override Type Input => typeof(WeatherRequest);
 
     private readonly IWeatherService _weatherService;
 
@@ -20,16 +19,20 @@ public class WeatherAPIFunction : FunctionBase
         _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
     }
 
-    protected override async Task<object> ExecuteFunctionAsync(object request)
+    protected override async Task<WeatherResponse> ExecuteFunctionAsync(WeatherRequest request)
     {
-        if (request is WeatherRequest weatherRequest)
+        try
         {
-            return await _weatherService.GetWeatherAsync(weatherRequest);
+            return await _weatherService.GetWeatherAsync(request);
         }
-
-        throw new ArgumentException("Invalid request type", nameof(request));
+        catch (Exception ex)
+        {
+            return new WeatherResponse { Models = new[] { WeatherModel.CreateFailure(request.Cities[0], ex.ToString()) } };
+        }
     }
 }
+
+// Request and Response classes
 
 public class WeatherRequest
 {
