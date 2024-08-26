@@ -5,7 +5,8 @@
         GPT4_ImagePreview,
         GPT4_Turbo,
         GPT3_5_Turbo,
-        GPT4o
+        GPT4o,
+        GPT4oMini
     }
 
 }

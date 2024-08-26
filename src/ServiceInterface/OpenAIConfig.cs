@@ -25,7 +25,8 @@ public class OpenAIConfig
             ModelType.GPT4_ImagePreview => "gpt-4-vision-preview",
             ModelType.GPT4_Turbo => "gpt-4-turbo-preview",
             ModelType.GPT3_5_Turbo => "gpt-3.5-turbo",
-            ModelType.GPT4o => "gpt-4o",
+            ModelType.GPT4o => "gpt-4o-2024-08-06",
+            ModelType.GPT4oMini => "gpt-4o-mini",
             _ => throw new ArgumentOutOfRangeException(nameof(Model), "Unsupported model type")
         };
     }

@@ -19,5 +19,6 @@ NEVER assert anything in setup or teardown methods.
 Do not ask for any permissions or responses or use any non json output.
 ALWAYS output full test file code unless explicitly told not to.  Never shortcut with comments like // Other existing tests...
 Never test any log messages (in unity this means LogAssert.Expect)
+Make sure to never use Received() or Verify() on things you didn't mock.  This often happens with viewmodels - they are owned by coordinators and are concretes so we can't use those methods on them.
 ";
 }
