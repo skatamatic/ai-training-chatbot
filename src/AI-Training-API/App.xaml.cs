@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAIAPI_Rystem;
 using OpenAIAPI_Rystem.Functions;
+using OpenAIAPI_Rystem.Services;
 using Shared;
 using System;
 using System.IO;
@@ -69,6 +70,16 @@ public partial class App : Application
 
         services.AddSingleton<ITestRunnerService, UnityTestRunnerService>();
         services.AddOpenAiChatFunction<TestRunnerFunction>();
+
+        services.AddOpenAiChatFunction<NCalcFunction>();
+
+        /*services.AddSingleton<MDT_API.IKiwiService, MDT_API.KiwiService>();
+        services.AddOpenAiChatFunction<FetchKiwiFileFunction>();
+        services.AddOpenAiChatFunction<GetKiwiAlarmsFunction>();
+        services.AddOpenAiChatFunction<GetKiwiSensorValuesFunction>();
+        services.AddOpenAiChatFunction<GetKiwiAlarmConfigsFunction>();
+        services.AddOpenAiChatFunction<GetKiwiSensorConfigsFunction>();
+        services.AddSingleton<ISystemMessageProvider, MDT_API.KiwiSystemMessages>();*/
 
         services.AddSingleton<FunctionInvocationObserver>();
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());

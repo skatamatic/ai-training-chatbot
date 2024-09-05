@@ -1,0 +1,450 @@
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEditor;
+using UnityEditor.Compilation;
+using UnityEditor.TestTools.TestRunner.Api;
+using UnityEngine;
+
+[InitializeOnLoad]
+public class SorcererWebServer : ScriptableObject
+{
+    const string SERVER_RUNNING_KEY = "Sorcerer_Running";
+    private const string NO_COMPILE_ERRORS = "No compilation errors";
+    static SorcererWebServer _instance;
+    static List<string> _compilationErrors = new List<string>();
+
+    HttpListener _listener;
+    CancellationTokenSource _cancellationTokenSource;
+    bool _isRunning;
+    ConcurrentQueue<HttpListenerContext> _requestQueue = new ConcurrentQueue<HttpListenerContext>();
+    TaskCompletionSource<bool> _compileTcs = new TaskCompletionSource<bool>();
+
+    static SorcererWebServer()
+    {
+        EditorApplication.delayCall += () =>
+        {
+            if (EditorPrefs.GetBool(SERVER_RUNNING_KEY, false))
+            {
+                StartServer();
+            }
+        };
+    }
+
+    [MenuItem("Scope AR/Sorcerer/Start Web Server")]
+    public static void StartServer()
+    {
+        if (_instance != null && _instance._isRunning)
+        {
+            Debug.LogWarning("Server already running.");
+            return;
+        }
+
+        if (_instance == null)
+        {
+            _instance = CreateInstance<SorcererWebServer>();
+            _instance.hideFlags = HideFlags.HideAndDontSave;
+        }
+
+        _instance.Initialize();
+
+        EditorPrefs.SetBool(SERVER_RUNNING_KEY, true);   
+    }
+
+    [MenuItem("Scope AR/Sorcerer/Stop Web Server")]
+    public static void StopServer()
+    {
+        if (_instance == null || !_instance._isRunning)
+        {
+            Debug.LogWarning("Server is not running.");
+            return;
+        }
+
+        EditorApplication.update -= Update;
+        CompilationPipeline.compilationFinished -= OnCompilationFinished;
+        CompilationPipeline.assemblyCompilationFinished -= OnAssemblyCompilationFinished;
+        EditorApplication.quitting -= OnEditorQuitting;
+
+        if (_instance != null)
+        {
+            _instance._isRunning = false;
+            _instance._cancellationTokenSource?.Cancel();
+            _instance._listener?.Stop();
+        }
+
+        Debug.Log("Web server stopped.");
+
+        if (!_instance._isDisabling)
+        {
+            EditorPrefs.SetBool(SERVER_RUNNING_KEY, false);
+        }
+    }
+
+    private static void Update()
+    {
+        if (_instance != null && _instance._isRunning)
+        {
+            _instance.ProcessRequests();
+        }
+    }
+
+    private static void OnCompilationFinished(object obj)
+    {
+        _instance?._compileTcs?.SetResult(true);
+        if (EditorPrefs.GetBool(SERVER_RUNNING_KEY, false))
+        {
+            StartServer();
+        }
+    }
+
+    private static void OnCompilationStarted(object obj)
+    {
+        if (_instance != null)
+        {
+            _compilationErrors.Clear();
+        }
+    }
+
+    private static void OnAssemblyCompilationFinished(string assemblyPath, CompilerMessage[] messages)
+    {
+        if (_instance != null)
+        {
+            _compilationErrors.Clear();
+            foreach (var message in messages)
+            {
+                if (message.type == CompilerMessageType.Error)
+                {
+                    _compilationErrors.Add($"{message.message} in {message.file}:{message.line}");
+                }
+            }
+        }
+    }
+
+    private static void OnEditorQuitting()
+    {
+        EditorPrefs.SetBool(SERVER_RUNNING_KEY, false);
+    }
+
+    private void OnEnable()
+    {
+        _instance = this;
+
+        if (EditorPrefs.GetBool(SERVER_RUNNING_KEY, false) && !_isRunning)
+        {
+            StartServer();
+        }
+    }
+
+    bool _isDisabling = false;
+    private void OnDisable()
+    {
+        _isDisabling = true;
+        StopServer();
+        _isDisabling = false;
+    }
+
+    private void Initialize()
+    {
+        _isRunning = true;
+
+        _listener = new HttpListener();
+        _listener.Prefixes.Add("http://*:8080/");
+        _listener.Start();           
+
+        EditorApplication.update += Update;
+        CompilationPipeline.compilationStarted += OnCompilationStarted;
+        CompilationPipeline.compilationFinished += OnCompilationFinished;
+        CompilationPipeline.assemblyCompilationFinished += OnAssemblyCompilationFinished;
+        EditorApplication.quitting += OnEditorQuitting;
+
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        Task.Run(() => StartListening(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+
+        Debug.Log("Web server started.");
+    }
+
+    private async Task StartListening(CancellationToken cancellationToken)
+    {
+        while (_isRunning)
+        {
+            try
+            {
+                if (_listener.IsListening)
+                {
+                    var context = await _listener.GetContextAsync();
+                    _requestQueue.Enqueue(context);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Server error: {e.Message}");
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
+
+    private void ProcessRequests()
+    {
+        while (_requestQueue.TryDequeue(out var context))
+        {
+            ProcessRequest(context);
+        }
+    }
+
+    private async void ProcessRequest(HttpListenerContext context)
+    {
+        string responseText;
+        string requestUrl = context.Request.Url.AbsolutePath;
+
+        try
+        {
+            if (requestUrl == "/runTests")
+            {
+                string filter = context.Request.QueryString["filter"];
+                string mode = context.Request.QueryString["mode"] ?? "edit";
+                responseText = await RunTestsAsync(filter, mode);
+            }
+            else if (requestUrl == "/recompile")
+            {
+                responseText = await Recompile();
+            }
+            else if (requestUrl == "/shutdown")
+            {
+                responseText = "Shutting down Unity...";
+                StopServer();
+                EditorApplication.Exit(0);
+            }
+            else if (requestUrl == "/status")
+            {
+                responseText = "Running";
+            }
+            else
+            {
+                responseText = "Unknown command";
+            }
+        }
+        catch (Exception e)
+        {
+            responseText = $"Error: {e.Message}";
+        }
+
+        Debug.Log("Got request: " + requestUrl + " Response: " + responseText);
+
+        byte[] buffer = Encoding.UTF8.GetBytes(responseText);
+        context.Response.ContentLength64 = buffer.Length;
+        await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+        context.Response.OutputStream.Close();
+    }
+
+    private async Task<string> Recompile()
+    {
+        _compileTcs = new TaskCompletionSource<bool>();
+        AssetDatabase.Refresh();
+        CompilationPipeline.RequestScriptCompilation();
+        await _compileTcs.Task;
+        return FormatCompilationErrors();
+    }
+
+    private string FormatCompilationErrors()
+    {
+        if (_compilationErrors.Count == 0)
+        {
+            return NO_COMPILE_ERRORS;
+        }
+
+        StringBuilder result = new StringBuilder();
+        foreach (var error in _compilationErrors)
+        {
+            result.Append(error);
+            result.Append("|");
+        }
+
+        return result.ToString();
+    }
+
+    private async Task<string> RunTestsAsync(string filter, string modeString)
+    {
+        try
+        {
+            var testRunner = new TestRunner();
+            var mode = modeString.Equals("play", StringComparison.OrdinalIgnoreCase) ? TestMode.PlayMode : TestMode.EditMode;
+            return await testRunner.RunTestsAsync(filter, mode);
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+}
+
+public class TestRunner : ITestRunner
+{
+    private TestRunnerApi _api;
+    private List<TestResult> _results;
+    private TaskCompletionSource<bool> _testCompletionSource;
+
+    public TestRunner()
+    {
+        _api = new TestRunnerApi();
+        _results = new List<TestResult>();
+    }
+
+    public async Task<string> RunTestsAsync(string filter, TestMode mode)
+    {
+        _results.Clear();
+        _testCompletionSource = new TaskCompletionSource<bool>();
+
+        var allTests = await GetAllTestNamesAsync(mode);
+        var regex = new Regex(filter);
+        var matchedTests = allTests.FindAll(testName => regex.IsMatch(testName));
+
+        if (matchedTests.Count == 0)
+        {
+            return "No tests found";
+        }
+
+        var filterSettings = new Filter
+        {
+            testMode = mode,
+            testNames = matchedTests.ToArray()
+        };
+
+        Debug.Log($"Running tests with filter: {filter} in mode: {mode}.  Matching tests: {filterSettings.testNames.Length}");
+
+        var callbacks = new TestCallback(this);
+        _api.RegisterCallbacks(callbacks);
+        _api.Execute(new ExecutionSettings(filterSettings));
+
+        await _testCompletionSource.Task;
+        _api.UnregisterCallbacks(callbacks);
+
+        return FormatResults();
+    }
+
+    private async Task<List<string>> GetAllTestNamesAsync(TestMode mode)
+    {
+        var testNames = new List<string>();
+        var tcs = new TaskCompletionSource<bool>();
+        int pendingVisits = 0;
+
+        void TestTreeCallback(ITestAdaptor test)
+        {
+            if (test.IsSuite)
+            {
+                foreach (var child in test.Children)
+                {
+                    Interlocked.Increment(ref pendingVisits);
+                    TestTreeCallback(child);
+                }
+            }
+            else
+            {
+                testNames.Add(test.FullName);
+            }
+
+            if (Interlocked.Decrement(ref pendingVisits) == 0)
+            {
+                tcs.SetResult(true);
+            }
+        }
+
+        Interlocked.Increment(ref pendingVisits);
+        _api.RetrieveTestList(mode, TestTreeCallback);
+        await tcs.Task;
+
+        return testNames;
+    }
+
+    private string FormatResults()
+    {
+        StringBuilder result = new StringBuilder();
+
+        foreach (var testResult in _results)
+        {
+            result.AppendLine($"Test: {testResult.Test.FullName}");
+            result.AppendLine($"Result: {testResult.ResultState}");
+            if (!string.IsNullOrEmpty(testResult.Message))
+            {
+                result.AppendLine($"Message: {testResult.Message.Replace("\n", "")}");
+            }
+            if (!string.IsNullOrEmpty(testResult.StackTrace))
+            {
+                result.AppendLine($"Stack Trace: {testResult.StackTrace}");
+            }
+            result.AppendLine();
+        }
+
+        return result.ToString();
+    }
+
+    private class TestCallback : ICallbacks
+    {
+        private readonly TestRunner _runner;
+
+        public TestCallback(TestRunner runner)
+        {
+            _runner = runner;
+        }
+
+        public void RunStarted(ITestAdaptor testsToRun)
+        {
+            Debug.Log("Test run started");
+        }
+
+        public void RunFinished(ITestResultAdaptor result)
+        {
+            Debug.Log("Test run finished");
+            _runner._testCompletionSource.SetResult(true);
+        }
+
+        public void TestStarted(ITestAdaptor test)
+        {
+            Debug.Log($"Test started: {test.FullName}");
+        }
+
+        public void TestFinished(ITestResultAdaptor result)
+        {
+            Debug.Log($"Test finished: {result.Test.FullName} with result: {result.ResultState}");
+            if (!result.Test.IsSuite)
+            {
+                _runner._results.Add(new TestResult
+                {
+                    Test = result.Test,
+                    ResultState = result.ResultState.ToString(),
+                    Message = result.Message,
+                    StackTrace = result.StackTrace
+                });
+            }
+        }
+    }
+}
+
+public interface ITestRunner
+{
+    Task<string> RunTestsAsync(string filter, TestMode mode);
+}
+
+public class TestResult
+{
+    public ITestAdaptor Test { get; set; }
+    public string ResultState { get; set; }
+    public string Message { get; set; }
+    public string StackTrace { get; set; }
+}

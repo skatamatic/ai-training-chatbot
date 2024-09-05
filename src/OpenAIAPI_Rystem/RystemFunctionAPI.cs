@@ -6,21 +6,25 @@ using Shared;
 
 namespace OpenAIAPI_Rystem;
 
-public class RystemFunctionAPI : IOpenAIAPI
+public class RystemFunctionAPI : IOpenAIAPI, IOutputter
 {
     private readonly IOpenAi _api;
     private readonly OpenAIConfig _config;
 
-    private Dictionary<string, ChatSession> _sessions = new();
-    private Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
+    private readonly Dictionary<string, ChatSession> _sessions = new();
+    private readonly Dictionary<string, IOpenAiChatFunction> _chatFunctions = new();
+    private readonly IEnumerable<ISystemMessageProvider> _systemMessages;
+
+    public event EventHandler<string> OnOutput;
 
     public string ActiveSessionId { get; private set; }
     public string SystemPrompt { get; set; }
 
-    public RystemFunctionAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions)
+    public RystemFunctionAPI(IOpenAiFactory factory, OpenAIConfig config, IEnumerable<IOpenAiChatFunction> chatFunctions, IEnumerable<ISystemMessageProvider> systemMessages)
     {
         _config = config;
         _api = factory.Create();
+        _systemMessages = systemMessages;
 
         foreach (var function in chatFunctions)
         {
@@ -71,6 +75,13 @@ public class RystemFunctionAPI : IOpenAIAPI
             request.AddSystemMessage(SystemPrompt);
         }
 
+        foreach (var provider in _systemMessages)
+        {
+            request.AddSystemMessage(provider.SystemMessage);
+        }
+
+        OnOutput?.Invoke(this, $"Prompting API in session {sessionId}");
+
         var result = await request.ExecuteAsync(false);
 
         while (IsFunctionCompletion(result))
@@ -89,6 +100,8 @@ public class RystemFunctionAPI : IOpenAIAPI
                 .WithNumberOfChoicesPerPrompt(1);
 
             result = await request.ExecuteAsync(false);
+
+            OnOutput?.Invoke(this, $"Reprompting API with function result");
         }
 
         var resultContent = GetContentFromResult(result);

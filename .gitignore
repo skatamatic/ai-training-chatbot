@@ -396,3 +396,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+src/AI-Training-API/secrets.json
+src/UnitTestGeneratorCLI/secrets.json
+src/AI-Training-API/secrets.json

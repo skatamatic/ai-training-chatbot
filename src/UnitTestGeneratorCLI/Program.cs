@@ -1,23 +1,32 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenAIAPI_Rystem;
+using OpenAIAPI_Rystem.Functions;
 using Shared;
-using UnityUnitTestGenerator;
+using Sorcerer.Interface;
+using Sorcerer.Services;
 
-namespace UnitTestGeneratorCLI;
+namespace Sorcerer.Console;
 
 class Program
 {
     static async Task Main(string[] args)
     {
-        using var scope = CreateHostBuilder(args).Build().Services.CreateScope();
+        var host = CreateHostBuilder(args).Build();
+        // Create a scope to resolve your services
+        using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
 
-        var generator = services.GetRequiredService<IUnitTestGenerator>();
-        await generator.Generate();
+        // Start the host to ensure all hosted services are started
+        await host.StartAsync();
 
-        Console.ReadLine();
+        var generator = services.GetRequiredService<IUnitTestSorcerer>();
+        await generator.GenerateAsync();
+
+        // Ensure graceful shutdown
+        await host.StopAsync();
     }
 
     static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -34,13 +43,16 @@ class Program
             .ConfigureServices((context, services) =>
             {
                 ConfigureServices(context.Configuration, services);
+            })
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
             });
 
     static void ConfigureServices(IConfiguration configuration, IServiceCollection services)
     {
         var openAIConfig = configuration.GetSection("OpenAIConfig").Get<OpenAIConfig>();
-        var generationConfig = configuration.GetSection("GenerationConfig").Get<GenerationConfig>();
-
+        
         services.AddSingleton(openAIConfig);
 
         services.AddSingleton<IOpenAIAPI, RystemFunctionAPI>();
@@ -50,15 +62,13 @@ class Program
             settings.ApiKey = openAIConfig.ApiKey;
         });
 
-        services.AddSingleton(generationConfig);
         services.AddSingleton<FunctionInvocationObserver>();
         services.AddSingleton<IFunctionInvocationObserver, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
         services.AddSingleton<IFunctionInvocationEmitter, FunctionInvocationObserver>(sp => sp.GetRequiredService<FunctionInvocationObserver>());
+        services.AddOpenAiChatFunction<NCalcFunction>();
 
-        services.AddSingleton<IUnitTestGenerator, UnitTestGenerator>(sp =>
-        {
-            var outputAction = new Action<string>(Console.WriteLine);
-            return new UnitTestGenerator(generationConfig, sp.GetRequiredService<IOpenAIAPI>(), outputAction);
-        });
+        services.AddHostedService<ConsoleOutputter>();
+
+        services.ConfigureSorcerer(configuration);
     }
 }

@@ -20,3 +20,8 @@ public interface IFunctionInvocationEmitter
     void EmitResult(string functionName, string result);
     void EmitProgress(string functionName, string message);
 }
+
+public interface ISystemMessageProvider
+{
+    string SystemMessage { get; }
+}
