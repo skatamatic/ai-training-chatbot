@@ -141,6 +141,11 @@ public class BaseSolutionTools : ISolutionTools
         var projects = FindAllProjectsInSolution(solutionFile);
         var testProjects = projects.Where(IsTestProject).ToList();
 
+        if (testProjects.Count == 0)
+        {
+            testProjects = projects.Where(x => Path.GetFileNameWithoutExtension(x).EndsWith("Tests")).ToList();
+        }
+
         if (testProjects.Count == 0) return null;
 
         var sourceProject = FindProjectFile(sourceFile);

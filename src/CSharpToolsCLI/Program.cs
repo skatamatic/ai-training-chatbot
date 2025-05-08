@@ -20,7 +20,7 @@ Action<string> output = x =>
     Console.ForegroundColor = col;
 };
 
-await Test_TestRunner();
+await Test_Defs();
 Console.ReadLine();
 
 async Task Test_TestRunner()
@@ -107,8 +107,8 @@ async Task Test_UnityTestRunner()
 
 async Task Test_Defs()
 {
-    const string FILENAME = "D:\\Repos\\worklink-app\\Assets\\ScopeAR\\Core\\Logging\\DefaultAirbrakeFilters.cs";
-    const int MAX_DEPTH = 2;
+    const string FILENAME = "E:\\repos\\ConfigEditor\\MDT.Cloud.ServiceMax2\\Service\\ServiceMaxTruckFilterService.cs";
+    const int MAX_DEPTH = 6;
 
     Console.WriteLine($"Loading file '{FILENAME}', max depth: {MAX_DEPTH}");
 
@@ -120,10 +120,13 @@ async Task Test_Defs()
     var analyisResult = await analyzer.Analyze(defResult, FILENAME);
     Console.CursorVisible = true;
 
-    ClearConsoleRow(startRow);
+    Console.Clear();
 
     foreach (var def in analyisResult.Definitions)
     {
+        if (!def.FullName.Contains("ServiceMax") )
+            continue;
+
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($"------------------------");
         Console.ForegroundColor = ConsoleColor.Magenta;
